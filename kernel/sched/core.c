@@ -8881,6 +8881,7 @@ void migrate_disable(void)
 	}
 
 	preempt_disable();
+	pin_current_cpu();
 
 	migrate_disable_update_cpus_allowed(p);
 	p->migrate_disable = 1;
@@ -8946,12 +8947,15 @@ void migrate_enable(void)
 			arg.task = p;
 			arg.dest_cpu = dest_cpu;
 
+			unpin_current_cpu();
 			preempt_enable();
 			stop_one_cpu(task_cpu(p), migration_cpu_stop, &arg);
 			tlb_migrate_finish(p->mm);
+
 			return;
 		}
 	}
+	unpin_current_cpu();
 	preempt_enable();
 }
 EXPORT_SYMBOL(migrate_enable);
