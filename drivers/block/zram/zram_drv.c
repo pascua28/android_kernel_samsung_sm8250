@@ -2649,6 +2649,7 @@ static int __zram_bvec_read(struct zram *zram, struct page *page, u32 index,
 #ifdef CONFIG_ZRAM_LRU_WRITEBACK
 	unsigned long flags;
 #endif
+	struct zcomp_strm *zstrm;
 
 	zram_slot_lock(zram, index);
 	if (zram_test_flag(zram, index, ZRAM_WB)) {
@@ -2693,6 +2694,7 @@ static int __zram_bvec_read(struct zram *zram, struct page *page, u32 index,
 
 	size = zram_get_obj_size(zram, index);
 
+	zstrm = zcomp_stream_get(zram->comp);
 	src = zs_map_object(zram->mem_pool,
 			    zram_entry_handle(zram, entry), ZS_MM_RO);
 	if (size == PAGE_SIZE) {
@@ -2701,8 +2703,6 @@ static int __zram_bvec_read(struct zram *zram, struct page *page, u32 index,
 		kunmap_atomic(dst);
 		ret = 0;
 	} else {
-		struct zcomp_strm *zstrm = zcomp_stream_get(zram->comp);
-
 		dst = kmap_atomic(page);
 		ret = zcomp_decompress(zstrm, src, size, dst);
 
@@ -2734,7 +2734,6 @@ static int __zram_bvec_read(struct zram *zram, struct page *page, u32 index,
 			BUG();
 		}
 		kunmap_atomic(dst);
-		zcomp_stream_put(zram->comp);
 	}
 	zs_unmap_object(zram->mem_pool, zram_entry_handle(zram, entry));
 #ifdef CONFIG_ZRAM_LRU_WRITEBACK
@@ -2750,6 +2749,7 @@ static int __zram_bvec_read(struct zram *zram, struct page *page, u32 index,
 	}
 	spin_unlock_irqrestore(&zram->list_lock, flags);
 #endif
+	zcomp_stream_put(zram->comp);
 	zram_slot_unlock(zram, index);
 
 	return ret;
