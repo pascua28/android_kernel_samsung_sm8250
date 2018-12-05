@@ -8374,7 +8374,7 @@ select_task_rq_fair(struct task_struct *p, int prev_cpu, int sd_flag, int wake_f
 	if (sd_flag & SD_BALANCE_WAKE) {
 		record_wakee(p);
 
-		if (static_branch_unlikely(&sched_energy_present)) {
+		if (sched_energy_enabled()) {
 #ifdef CONFIG_SCHED_WALT
 			new_cpu = find_energy_efficient_cpu(p, prev_cpu, sync,
 							    sync_boost,
@@ -9217,7 +9217,7 @@ int can_migrate_task(struct task_struct *p, struct lb_env *env)
 	env->flags &= ~LBF_ALL_PINNED;
 
 #ifdef CONFIG_SCHED_WALT
-	if (static_branch_unlikely(&sched_energy_present)) {
+	if (sched_energy_enabled()) {
 		struct root_domain *rd = env->dst_rq->rd;
 
 		if ((rcu_dereference(rd->pd) && !sd_overutilized(env->sd)) &&
@@ -10749,7 +10749,7 @@ static struct sched_group *find_busiest_group(struct lb_env *env)
 	 */
 	update_sd_lb_stats(env, &sds);
 
-	if (static_branch_unlikely(&sched_energy_present)) {
+	if (sched_energy_enabled()) {
 		struct root_domain *rd = env->dst_rq->rd;
 #ifdef CONFIG_SCHED_WALT
 		if (rcu_dereference(rd->pd) && !sd_overutilized(env->sd)) {
@@ -11804,7 +11804,7 @@ static inline int find_new_ilb(void)
 {
 	int ilb;
 
-	if (static_branch_likely(&sched_energy_present))
+	if (sched_energy_enabled())
 		return find_energy_aware_new_ilb();
 
 	for_each_cpu_and(ilb, nohz.idle_cpus_mask,
@@ -11905,7 +11905,7 @@ static void nohz_balancer_kick(struct rq *rq)
 	 * is overutilized and has 2 tasks. The misfit task migration
 	 * happens from the tickpath.
 	 */
-	if (static_branch_likely(&sched_energy_present)) {
+	if (sched_energy_enabled()) {
 		if (rq->nr_running >= 2 && cpu_overutilized(cpu))
 			flags = NOHZ_KICK_MASK;
 		goto out;
