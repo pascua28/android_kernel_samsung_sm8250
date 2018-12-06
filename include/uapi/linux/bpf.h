@@ -3002,7 +3002,7 @@ struct bpf_flow_keys {
 };
 
 struct bpf_func_info {
-	__u32	insn_offset;
+	__u32	insn_off;
 	__u32	type_id;
 };
 
