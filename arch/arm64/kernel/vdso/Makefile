@@ -23,7 +23,7 @@ ccflags-y += $(DISABLE_LTO)
 
 CFLAGS_REMOVE_vgettimeofday.o += $(CC_FLAGS_SCS)
 
-ccflags-y := -fno-common -fno-builtin -fno-stack-protector
+ccflags-y := -fno-common -fno-builtin -fno-stack-protector -ffixed-x18
 ccflags-y += -DDISABLE_BRANCH_PROFILING
 
 VDSO_LDFLAGS := -Bsymbolic
