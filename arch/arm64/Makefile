@@ -49,14 +49,11 @@ $(warning Detected assembler with broken .inst; disassembly will be unreliable)
   endif
 endif
 
-ifeq ($(cc-name),clang)
-KBUILD_CFLAGS	+= -mno-implicit-float
+ifeq ($(CONFIG_CC_IS_CLANG), y)
+COMPATCC ?= $(CC) --target=$(notdir $(CROSS_COMPILE_COMPAT:%-=%))
 else
-KBUILD_CFLAGS	+= -mgeneral-regs-only
-endif
-KBUILD_CFLAGS	+= $(lseinstr) $(brokengasinst)
-
 COMPATCC ?= $(CROSS_COMPILE_COMPAT)gcc
+endif
 export COMPATCC
 
 ifeq ($(CONFIG_GENERIC_COMPAT_VDSO), y)
