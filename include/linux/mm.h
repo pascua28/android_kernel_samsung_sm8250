@@ -3056,19 +3056,6 @@ static inline void setup_nr_node_ids(void) {}
 extern int want_old_faultaround_pte;
 
 extern bool need_memory_boosting(struct pglist_data *pgdat);
-#ifdef CONFIG_PROCESS_RECLAIM
-struct reclaim_param {
-	struct vm_area_struct *vma;
-	/* Number of pages scanned */
-	int nr_scanned;
-	/* max pages to reclaim */
-	int nr_to_reclaim;
-	/* pages reclaimed */
-	int nr_reclaimed;
-};
-extern struct reclaim_param reclaim_task_anon(struct task_struct *task,
-		int nr_to_reclaim);
-#endif
 
 enum memsize_kernel_type {
 	MEMSIZE_KERNEL_KERNEL = 0,
