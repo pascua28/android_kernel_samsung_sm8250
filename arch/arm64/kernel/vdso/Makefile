@@ -27,6 +27,7 @@ GCOV_PROFILE := n
 ccflags-y += -Wl,-shared
 
 ccflags-y += $(call cc-option, -fno-whole-program)
+ccflags-y += -O3
 
 obj-y += vdso.o
 extra-y += vdso.lds
