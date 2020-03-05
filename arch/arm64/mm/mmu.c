@@ -1444,7 +1444,15 @@ void *__init fixmap_remap_fdt(phys_addr_t dt_phys, int *size, pgprot_t prot)
 
 int __init arch_ioremap_p4d_supported(void)
 {
-	return 0;
+	void *dt_virt;
+	int size;
+
+	dt_virt = __fixmap_remap_fdt(dt_phys, &size, PAGE_KERNEL_RO);
+	if (!dt_virt)
+		return NULL;
+
+	memblock_reserve(dt_phys, size);
+	return dt_virt;
 }
 
 int __init arch_ioremap_pud_supported(void)
