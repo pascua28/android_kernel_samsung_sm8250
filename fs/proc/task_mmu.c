@@ -1757,20 +1757,11 @@ cont:
 		if (!page)
 			continue;
 
-		if (PageTransCompound(page))
-			continue;
 #ifdef CONFIG_ZRAM_LRU_WRITEBACK
 		if (is_lru_wb && ptep_test_and_clear_young(vma, addr, pte))
 			continue;
 #endif
-
-		if (PageUnevictable(page))
-			continue;
-
-		if (!PageLRU(page))
-			continue;
-
-		if (isolate_lru_page(compound_head(page)))
+		if (isolate_lru_page(page))
 			continue;
 
 		/* MADV_FREE clears pte dirty bit and then marks the page
@@ -1859,16 +1850,10 @@ static ssize_t reclaim_write(struct file *file, const char __user *buf,
 	struct vm_area_struct *vma;
 	enum reclaim_type type;
 	char *type_buf;
-<<<<<<< HEAD
-	struct mm_walk reclaim_walk = {};
-	unsigned long start = 0;
-	unsigned long end = 0;
 #ifdef CONFIG_ZRAM_LRU_WRITEBACK
 	struct zwbs *zwbs[NR_ZWBS];
 	int err = 0;
 #endif
-=======
->>>>>>> 924982cfc404 (Revert "mm: Support address range reclaim")
 
 	memset(buffer, 0, sizeof(buffer));
 	if (count > sizeof(buffer) - 1)
@@ -1884,54 +1869,12 @@ static ssize_t reclaim_write(struct file *file, const char __user *buf,
 		type = RECLAIM_ANON;
 	else if (!strcmp(type_buf, "all"))
 		type = RECLAIM_ALL;
-<<<<<<< HEAD
-	else if (isdigit(*type_buf))
-		type = RECLAIM_RANGE;
 #ifdef CONFIG_ZRAM_LRU_WRITEBACK
 	else if (!strcmp(type_buf, "writeback"))
 		type = RECLAIM_WRITEBACK;
 #endif
 	else
-		goto out_err;
-
-#ifdef CONFIG_PROCESS_RECLAIM_IGNORE_ALL_TYPE
-	if (type == RECLAIM_ALL)
-		return count;
-#endif
-	if (type == RECLAIM_RANGE) {
-		char *token;
-		unsigned long long len, len_in, tmp;
-
-		token = strsep(&type_buf, " ");
-		if (!token)
-			goto out_err;
-		tmp = memparse(token, &token);
-		if (tmp & ~PAGE_MASK || tmp > ULONG_MAX)
-			goto out_err;
-		start = tmp;
-
-		token = strsep(&type_buf, " ");
-		if (!token)
-			goto out_err;
-		len_in = memparse(token, &token);
-		len = (len_in + ~PAGE_MASK) & PAGE_MASK;
-		if (len > ULONG_MAX)
-			goto out_err;
-		/*
-		 * Check to see whether len was rounded up from small -ve
-		 * to zero.
-		 */
-		if (len_in && !len)
-			goto out_err;
-
-		end = start + len;
-		if (end < start)
-			goto out_err;
-	}
-=======
-	else
 		return -EINVAL;
->>>>>>> 924982cfc404 (Revert "mm: Support address range reclaim")
 
 	task = get_proc_task(file->f_path.dentry->d_inode);
 	if (!task)
@@ -1952,37 +1895,13 @@ static ssize_t reclaim_write(struct file *file, const char __user *buf,
 			.mm = mm,
 		};
 
-<<<<<<< HEAD
-	reclaim_walk.mm = mm;
-	reclaim_walk.pmd_entry = reclaim_pte_range;
-
 #ifdef CONFIG_ZRAM_LRU_WRITEBACK
 	if (type == RECLAIM_WRITEBACK) {
 		reclaim_walk.pmd_entry = writeback_pte_range;
 		reclaim_walk.private = (void *)zwbs;
 	}
 #endif
-
-	down_read(&mm->mmap_sem);
-	if (type == RECLAIM_RANGE) {
-		vma = find_vma(mm, start);
-		while (vma) {
-			if (vma->vm_start > end)
-				break;
-			if (is_vm_hugetlb_page(vma))
-				continue;
-
-			reclaim_walk.private = vma;
-			walk_page_range(max(vma->vm_start, start),
-					min(vma->vm_end, end),
-					&reclaim_walk))
-				break;
-			vma = vma->vm_next;
-		}
-	} else {
-=======
 		down_read(&mm->mmap_sem);
->>>>>>> 924982cfc404 (Revert "mm: Support address range reclaim")
 		for (vma = mm->mmap; vma; vma = vma->vm_next) {
 			reclaim_walk.private = vma;
 
@@ -1995,31 +1914,19 @@ static ssize_t reclaim_write(struct file *file, const char __user *buf,
 				continue;
 
 			walk_page_range(vma->vm_start, vma->vm_end,
-<<<<<<< HEAD
-				&reclaim_walk);
-			if (err) {
-				count = err;
-				break;
-			}
-=======
 					&reclaim_walk);
->>>>>>> 924982cfc404 (Revert "mm: Support address range reclaim")
 		}
 		flush_tlb_mm(mm);
 		up_read(&mm->mmap_sem);
 		mmput(mm);
 	}
 	put_task_struct(task);
-<<<<<<< HEAD
 #ifdef CONFIG_ZRAM_LRU_WRITEBACK
 	if (type == RECLAIM_WRITEBACK) {
 		swap_writeback_list(zwbs, NULL);
 		free_zwbs(zwbs);
 	}
 #endif
-	return count;
-=======
->>>>>>> 924982cfc404 (Revert "mm: Support address range reclaim")
 
 	return count;
 }
