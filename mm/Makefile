@@ -116,4 +116,3 @@ obj-$(CONFIG_PERCPU_STATS) += percpu-stats.o
 obj-$(CONFIG_HMM) += hmm.o
 obj-$(CONFIG_MEMFD_CREATE) += memfd.o
 obj-$(CONFIG_PAGE_BOOST_RECORDING) += io_record.o
-obj-$(CONFIG_PROCESS_RECLAIM)	+= process_reclaim.o
