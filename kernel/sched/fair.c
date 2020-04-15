@@ -11165,11 +11165,15 @@ static int load_balance(int this_cpu, struct rq *this_rq,
 		.loop		= 0,
 	};
 
+#ifdef CONFIG_SCHED_WALT
 	env.prefer_spread = (idle != CPU_NOT_IDLE &&
 				prefer_spread_on_idle(this_cpu,
 				idle == CPU_NEWLY_IDLE) &&
 				!((sd->flags & SD_ASYM_CPUCAPACITY) &&
 				 !is_asym_cap_cpu(this_cpu)));
+#else
+	env.prefer_spread = false;
+#endif
 
 	cpumask_and(cpus, sched_domain_span(sd), cpu_active_mask);
 
@@ -12320,6 +12324,11 @@ static bool silver_has_big_tasks(void)
 
 	return false;
 }
+#else
+static inline bool silver_has_big_tasks(void)
+{
+	return false;
+}
 #endif
 
 /*
@@ -12334,11 +12343,12 @@ static int idle_balance(struct rq *this_rq, struct rq_flags *rf)
 	int pulled_task = 0;
 	u64 curr_cost = 0;
 	u64 avg_idle = this_rq->avg_idle;
+#ifdef CONFIG_SCHED_WALT
 	bool prefer_spread = prefer_spread_on_idle(this_cpu, true);
 	bool force_lb = (!is_min_capacity_cpu(this_cpu) &&
 				silver_has_big_tasks() &&
 				(atomic_read(&this_rq->nr_iowait) == 0));
-
+#endif
 
 	if (cpu_isolated(this_cpu))
 		return 0;
@@ -12390,10 +12400,12 @@ static int idle_balance(struct rq *this_rq, struct rq_flags *rf)
 		if (!(sd->flags & SD_LOAD_BALANCE))
 			continue;
 
+#ifdef CONFIG_SCHED_WALT
 		if (prefer_spread && !force_lb &&
 			(sd->flags & SD_ASYM_CPUCAPACITY) &&
 			!is_asym_cap_cpu(this_cpu))
 			avg_idle = this_rq->avg_idle;
+#endif
 
 		if (avg_idle < curr_cost + sd->max_newidle_lb_cost) {
 			update_next_balance(sd, &next_balance);
