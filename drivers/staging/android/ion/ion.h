@@ -23,6 +23,7 @@
 #include <linux/miscdevice.h>
 #include <linux/bitops.h>
 #include <linux/vmstat.h>
+#include <linux/msm_dma_iommu_mapping.h>
 #include "ion_kernel.h"
 #include "../uapi/ion.h"
 #include "../uapi/msm_ion.h"
@@ -145,6 +146,7 @@ struct ion_buffer {
 	struct sg_table *sg_table;
 	struct list_head attachments;
 	struct list_head vmas;
+	struct msm_iommu_data iommu_data;
 	char task_comm[TASK_COMM_LEN];
 	pid_t pid;
 	char thread_comm[TASK_COMM_LEN];
