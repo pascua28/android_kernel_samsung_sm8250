@@ -326,7 +326,7 @@ static const struct attribute_group mhi_sysfs_group = {
 	.attrs = mhi_sysfs_attrs,
 };
 
-void mhi_create_sysfs(struct mhi_controller *mhi_cntrl)
+int mhi_create_sysfs(struct mhi_controller *mhi_cntrl)
 {
 	int ret;
 
@@ -341,6 +341,8 @@ void mhi_create_sysfs(struct mhi_controller *mhi_cntrl)
 		if (ret)
 			MHI_CNTRL_LOG("Failed to create mhi_tsync_group");
 	}
+
+	return ret;
 }
 
 void mhi_destroy_sysfs(struct mhi_controller *mhi_cntrl)
