@@ -4,7 +4,6 @@
 #
 
 # core layer
-ccflags-y += $(DISABLE_LTO)
 obj-y += core/
 obj-y += controllers/
 obj-y += devices/
