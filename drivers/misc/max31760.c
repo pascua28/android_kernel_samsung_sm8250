@@ -198,6 +198,7 @@ static int max31760_parse_dt(struct device *dev,
 			goto error2;
 		}
 	}
+	}
 	turn_gpio(pdata, true);
 
 	return ret;
