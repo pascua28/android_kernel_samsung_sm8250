@@ -146,6 +146,16 @@ static void __ref do_deferred_initcalls(struct work_struct *work)
 static DECLARE_WORK(deferred_initcall_work, do_deferred_initcalls);
 #endif
 
+bool legacy_ebpf __read_mostly = false;
+EXPORT_SYMBOL(legacy_ebpf);
+
+static int __init parse_legacy_ebpf(char *str)
+{
+	strtobool(str, &legacy_ebpf);
+	return 1;
+}
+__setup("android.legacy_ebpf=", parse_legacy_ebpf);
+
 /*
  * Debug helper: via this flag we know that we are in 'early bootup code'
  * where only the boot processor is running with IRQ disabled.  This means
