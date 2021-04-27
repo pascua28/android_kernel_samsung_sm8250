@@ -1497,6 +1497,10 @@ struct task_struct {
 	int drawing_flag;
 	int drawing_mig_boost;
 #endif
+#ifdef CONFIG_ANDROID_SIMPLE_LMK
+	struct task_struct		*simple_lmk_next;
+#endif
+
 	/*
 	 * New fields for task_struct should be added above here, so that
 	 * they are included in the randomized portion of task_struct.
