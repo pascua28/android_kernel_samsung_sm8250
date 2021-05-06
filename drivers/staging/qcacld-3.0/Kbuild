@@ -3356,6 +3356,7 @@ else
 	ccflags-y += -DWLAN_HOST_ARCH_ARM=1
 endif
 
+ccflags-y += $(call cc-option, -Os)
 ccflags-y += $(call cc-option, -foptimize-sibling-calls)
 
 # inject some build related information
