@@ -37,6 +37,9 @@
 
 #include "power.h"
 
+#undef trace_suspend_resume
+#define trace_suspend_resume(x, ...)
+
 const char * const pm_labels[] = {
 	[PM_SUSPEND_TO_IDLE] = "freeze",
 	[PM_SUSPEND_STANDBY] = "standby",
