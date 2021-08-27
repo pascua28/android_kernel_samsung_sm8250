@@ -2575,16 +2575,6 @@ static int lock_page_maybe_drop_mmap(struct vm_fault *vmf, struct page *page,
 	return 1;
 }
 
-static void filemap_tracing_mark_begin(struct file *file,
-		pgoff_t offset, unsigned int size, bool sync) { }
-static void filemap_tracing_mark_end(void) { }
-
-#if CONFIG_MMAP_READAROUND_LIMIT == 0
-int mmap_readaround_limit = (VM_MAX_READAHEAD / 4); 		/* page */
-#else
-int mmap_readaround_limit = CONFIG_MMAP_READAROUND_LIMIT;	/* page */
-#endif
-
 /*
  * Synchronous readahead happens when we don't even find a page in the page
  * cache at all.  We don't want to perform IO under the mmap sem, so if we have
@@ -2599,20 +2589,17 @@ static struct file *do_sync_mmap_readahead(struct vm_fault *vmf)
 	struct address_space *mapping = file->f_mapping;
 	struct file *fpin = NULL;
 	pgoff_t offset = vmf->pgoff;
-	unsigned int ra_pages;
 
 	/* If we don't want any read-ahead, don't bother */
-	if (vmf->vma_flags & VM_RAND_READ)
+	if (vmf->vma->vm_flags & VM_RAND_READ)
 		return fpin;
 	if (!ra->ra_pages)
 		return fpin;
 
-	if (vmf->vma_flags & VM_SEQ_READ) {
+	if (vmf->vma->vm_flags & VM_SEQ_READ) {
 		fpin = maybe_unlock_mmap_for_io(vmf, fpin);
-		filemap_tracing_mark_begin(file, offset, ra->ra_pages, 1);
 		page_cache_sync_readahead(mapping, ra, file, offset,
 					  ra->ra_pages);
-		filemap_tracing_mark_end();
 		return fpin;
 	}
 
@@ -2631,13 +2618,10 @@ static struct file *do_sync_mmap_readahead(struct vm_fault *vmf)
 	 * mmap read-around
 	 */
 	fpin = maybe_unlock_mmap_for_io(vmf, fpin);
-	ra_pages = min_t(unsigned int, ra->ra_pages, mmap_readaround_limit);
-	ra->start = max_t(long, 0, offset - ra_pages / 2);
-	ra->size = ra_pages;
-	ra->async_size = ra_pages / 4;
-	filemap_tracing_mark_begin(file, offset, ra_pages, 1);
+	ra->start = max_t(long, 0, offset - ra->ra_pages / 2);
+	ra->size = ra->ra_pages;
+	ra->async_size = ra->ra_pages / 4;
 	ra_submit(ra, mapping, file);
-	filemap_tracing_mark_end();
 	return fpin;
 }
 
@@ -2656,16 +2640,14 @@ static struct file *do_async_mmap_readahead(struct vm_fault *vmf,
 	pgoff_t offset = vmf->pgoff;
 
 	/* If we don't want any read-ahead, don't bother */
-	if (vmf->vma_flags & VM_RAND_READ)
+	if (vmf->vma->vm_flags & VM_RAND_READ || !ra->ra_pages)
 		return fpin;
 	if (ra->mmap_miss > 0)
 		ra->mmap_miss--;
 	if (PageReadahead(page)) {
 		fpin = maybe_unlock_mmap_for_io(vmf, fpin);
-		filemap_tracing_mark_begin(file, offset, ra->ra_pages, 0);
 		page_cache_async_readahead(mapping, ra, file,
 					   page, offset, ra->ra_pages);
-		filemap_tracing_mark_end();
 	}
 	return fpin;
 }
@@ -2681,7 +2663,7 @@ static struct file *do_async_mmap_readahead(struct vm_fault *vmf,
  * it in the page cache, and handles the special cases reasonably without
  * having a lot of duplicated code.
  *
- * vma->vm_mm->mmap_sem must be held on entry (except FAULT_FLAG_SPECULATIVE).
+ * vma->vm_mm->mmap_sem must be held on entry.
  *
  * If our return value has VM_FAULT_RETRY set, it's because
  * lock_page_or_retry() returned 0.
@@ -2788,9 +2770,7 @@ page_not_uptodate:
 	 */
 	ClearPageError(page);
 	fpin = maybe_unlock_mmap_for_io(vmf, fpin);
-	filemap_tracing_mark_begin(file, offset, 1, 1);
 	error = mapping->a_ops->readpage(file, page);
-	filemap_tracing_mark_end();
 	if (!error) {
 		wait_on_page_locked(page);
 		if (!PageUptodate(page))

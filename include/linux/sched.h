@@ -26,6 +26,7 @@
 #include <linux/sched/prio.h>
 #include <linux/signal_types.h>
 #include <linux/mm_types_task.h>
+#include <linux/mm_event.h>
 #include <linux/task_io_accounting.h>
 #include <linux/rseq.h>
 
@@ -46,7 +47,6 @@ struct pid_namespace;
 struct pipe_inode_info;
 struct rcu_node;
 struct reclaim_state;
-struct capture_control;
 struct robust_list_head;
 struct sched_attr;
 struct sched_param;
@@ -1175,7 +1175,10 @@ struct task_struct {
 	/* Deadlock detection and priority inheritance handling: */
 	struct rt_mutex_waiter		*pi_blocked_on;
 #endif
-
+#ifdef CONFIG_MM_EVENT_STAT
+	struct mm_event_task	mm_event[MM_TYPE_NUM];
+	unsigned long		next_period;
+#endif
 #ifdef CONFIG_DEBUG_MUTEXES
 	/* Mutex deadlock detection: */
 	struct mutex_waiter		*blocked_on;
@@ -1227,9 +1230,6 @@ struct task_struct {
 
 	struct io_context		*io_context;
 
-#ifdef CONFIG_COMPACTION
-	struct capture_control		*capture_control;
-#endif
 	/* Ptrace state: */
 	unsigned long			ptrace_message;
 	siginfo_t			*last_siginfo;
