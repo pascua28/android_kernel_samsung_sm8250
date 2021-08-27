@@ -2752,9 +2752,6 @@ static int s_show(struct seq_file *m, void *p)
 	if (is_vmalloc_addr(v->pages))
 		seq_puts(m, " vpages");
 
-	if (v->flags & VM_LOWMEM)
-		seq_puts(m, " lowmem");
-
 	show_numa_info(m, v);
 	seq_putc(m, '\n');
 	return 0;
