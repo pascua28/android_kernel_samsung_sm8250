@@ -30,3 +30,6 @@ config QCOM_KGSL_IOMMU
 config CORESIGHT_ADRENO
 	bool
 	default y if QCOM_KGSL=y && CORESIGHT=y
+
+config KGSL_PROCESS_RECLAIM
+	bool "QCOM Retardness"
