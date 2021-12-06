@@ -3958,7 +3958,6 @@ static ssize_t diagchar_read(struct file *file, char __user *buf, size_t count,
 		goto exit;
 	}
 
-exit:
 	if (driver->data_ready[index] & DCI_DATA_TYPE) {
 		data_type = driver->data_ready[index] & DCI_DATA_TYPE;
 		mutex_unlock(&driver->diagchar_mutex);
@@ -4028,7 +4027,9 @@ exit:
 		mutex_unlock(&driver->dci_mutex);
 		goto end;
 	}
+exit:
 	mutex_unlock(&driver->diagchar_mutex);
+	goto ret_end;
 end:
 	/*
 	 * Flush any read that is currently pending on DCI data and
@@ -4039,6 +4040,7 @@ end:
 		diag_ws_on_copy_complete(DIAG_WS_DCI);
 		flush_workqueue(driver->diag_dci_wq);
 	}
+ret_end:
 	return ret;
 }
 
