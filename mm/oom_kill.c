@@ -832,7 +832,7 @@ static int oom_reaper(void *unused)
 	return 0;
 }
 
-static void wake_oom_reaper(struct task_struct *tsk)
+void wake_oom_reaper(struct task_struct *tsk)
 {
 	/*
 	 * Move the lock here to avoid scenario of queuing
@@ -863,7 +863,7 @@ static int __init oom_init(void)
 }
 subsys_initcall(oom_init)
 #else
-static inline void wake_oom_reaper(struct task_struct *tsk)
+inline void wake_oom_reaper(struct task_struct *tsk)
 {
 }
 #endif /* CONFIG_MMU */
