@@ -1389,7 +1389,7 @@ void __set_fixmap(enum fixed_addresses idx,
 	}
 }
 
-void *__init fixmap_remap_fdt(phys_addr_t dt_phys, int *size, pgprot_t prot)
+void *__init __fixmap_remap_fdt(phys_addr_t dt_phys, int *size, pgprot_t prot)
 {
 	const u64 dt_virt_base = __fix_to_virt(FIX_FDT);
 	int offset;
@@ -1442,7 +1442,7 @@ void *__init fixmap_remap_fdt(phys_addr_t dt_phys, int *size, pgprot_t prot)
 	return dt_virt;
 }
 
-int __init arch_ioremap_p4d_supported(void)
+void *__init fixmap_remap_fdt(phys_addr_t dt_phys)
 {
 	void *dt_virt;
 	int size;
