@@ -75,10 +75,8 @@ enum scm_arg_types {
  * @arginfo: Metadata describing the arguments in args[]
  * @args: The array of arguments for the secure syscall
  * @ret: The values returned by the secure syscall
- * @extra_arg_buf: The buffer containing extra arguments
-		   (that don't fit in available registers)
  * @x5: The 4rd argument to the secure syscall or physical address of
-	extra_arg_buf
+	the extra arg buffer
  */
 struct scm_desc {
 	u32 arginfo;
@@ -86,7 +84,6 @@ struct scm_desc {
 	u64 ret[MAX_SCM_RETS];
 
 	/* private */
-	void *extra_arg_buf;
 	u64 x5;
 };
 
