@@ -199,7 +199,7 @@ static int kgsl_reclaim_callback(struct notifier_block *nb,
 	struct kgsl_process_private *p, *process = NULL;
 	struct kgsl_mem_entry *entry;
 	struct kgsl_memdesc *memdesc;
-	int valid_entry, next = 0, ret;
+	int valid_entry, next = 0, ret = 0;
 
 	spin_lock(&kgsl_driver.proclist_lock);
 	list_for_each_entry(p, &kgsl_driver.process_list, list) {
