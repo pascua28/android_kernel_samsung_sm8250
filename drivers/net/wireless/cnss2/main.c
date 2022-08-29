@@ -1624,7 +1624,7 @@ int cnss_va_to_pa(struct device *dev, size_t size, void *va, dma_addr_t dma,
 
 	ret = dma_get_sgtable_attrs(dev, &sgt, va, dma, size, attrs);
 	if (ret) {
-		cnss_pr_err("Failed to get sgtable for va: 0x%pK, dma: %pa, size: 0x%zx, attrs: 0x%x\n",
+		cnss_pr_err("Failed to get sgtable for va: 0x%pK, dma: %pa, size: 0x%zx, attrs: 0x%lx\n",
 			    va, &dma, size, attrs);
 		return -EINVAL;
 	}
@@ -2146,7 +2146,7 @@ static ssize_t store_mac_addr(struct kobject *kobj,
 			    const char *buf,
 			    size_t count)
 {
-	sscanf(buf, "%02X:%02X:%02X:%02X:%02X:%02X",
+	sscanf(buf, "%02hhX:%02hhX:%02hhX:%02hhX:%02hhX:%02hhX",
 		(const u8*)&mac_from_macloader[0],
 		(const u8*)&mac_from_macloader[1],
 		(const u8*)&mac_from_macloader[2],
@@ -2395,7 +2395,7 @@ static int cnss_reboot_notifier(struct notifier_block *nb,
 	del_timer(&plat_priv->fw_boot_timer);
 	complete_all(&plat_priv->power_up_complete);
 	complete_all(&plat_priv->cal_complete);
-	cnss_pr_dbg("Reboot is in progress with action %d\n", action);
+	cnss_pr_dbg("Reboot is in progress with action %ld\n", action);
 
 	return NOTIFY_DONE;
 }
