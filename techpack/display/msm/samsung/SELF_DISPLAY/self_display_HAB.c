@@ -228,7 +228,7 @@ void make_mass_self_display_img_cmds_HAB(struct samsung_display_driver_data *vdd
 
 	SDE_ATRACE_END("mass_cmd_generation");
 
-	LCD_INFO("Total Cmd Count(%d), Last Cmd Payload Len(%d)\n", c_cnt, tcmds[c_cnt-1].msg.tx_len);
+	LCD_INFO("Total Cmd Count(%d), Last Cmd Payload Len(%ld)\n", c_cnt, tcmds[c_cnt-1].msg.tx_len);
 
 	return;
 }

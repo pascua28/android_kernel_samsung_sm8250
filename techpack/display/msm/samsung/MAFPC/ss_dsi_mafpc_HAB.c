@@ -177,7 +177,7 @@ void ss_mafpc_make_img_mass_cmds_HAB(struct samsung_display_driver_data *vdd, ch
 	mutex_unlock(&vdd->mafpc.vdd_mafpc_lock);
 	SDE_ATRACE_END("mafpc_mass_cmd_generation");
 
-	LCD_INFO("Total Cmd Count(%d), Last Cmd Payload Len(%d)\n", c_cnt, tcmds[c_cnt-1].msg.tx_len);
+	LCD_INFO("Total Cmd Count(%d), Last Cmd Payload Len(%ld)\n", c_cnt, tcmds[c_cnt-1].msg.tx_len);
 
 	return;
 }

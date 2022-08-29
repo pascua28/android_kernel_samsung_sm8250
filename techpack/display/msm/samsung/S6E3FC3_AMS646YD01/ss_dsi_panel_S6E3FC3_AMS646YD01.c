@@ -226,7 +226,7 @@ static struct dsi_panel_cmd_set *ss_brightness_gamma_mode2_normal
 	}
 
 	if (cd_index > ARRAY_SIZE(normal_aor_manual)) {
-		LCD_ERR(": Invalid data cd_index : %d array_max_size : %d\n",
+		LCD_ERR(": Invalid data cd_index : %d array_max_size : %ld\n",
 			cd_index, ARRAY_SIZE(normal_aor_manual));
 		return NULL;
 	}
@@ -343,7 +343,7 @@ static struct dsi_panel_cmd_set *ss_brightness_gamma_mode2_hbm
 	}
 
 	if (cd_index > ARRAY_SIZE(hbm_aor_manual)) {
-		LCD_ERR(": Invalid data cd_index : %d array_max_size : %d\n",
+		LCD_ERR(": Invalid data cd_index : %d array_max_size : %ld\n",
 			cd_index, ARRAY_SIZE(hbm_aor_manual));
 		return NULL;
 	}

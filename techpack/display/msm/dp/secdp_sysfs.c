@@ -151,7 +151,7 @@ static ssize_t dex_store(struct class *class,
 	}
 
 	if (size >= MAX_DEX_STORE_LEN) {
-		DP_ERR("too long args! %d\n", size);
+		DP_ERR("too long args! %ld\n", size);
 		goto exit;
 	}
 
