@@ -726,7 +726,7 @@ int q6core_get_avcs_api_version_per_service(uint32_t service_id)
 	}
 
 	if (q6core_lcl.q6core_avcs_ver_info.ver_info == NULL) {
-		pr_err("%s:: ver_info is NULL\n");
+		pr_err("ver_info is NULL\n");
 		return -EINVAL;
 	}
 
