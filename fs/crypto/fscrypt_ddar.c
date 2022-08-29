@@ -163,13 +163,7 @@ struct inode *fscrypt_bio_get_inode(const struct bio *bio)
 		return NULL;
 
 	if (PageAnon(bio->bi_io_vec->bv_page)) {
-		struct inode *inode;
-
-		/* Using direct-io (O_DIRECT) without page cache */
-		// SDP - START BLOCK
-		// inode = dio_bio_get_inode((struct bio *)bio);
-		// dd_verbose("inode on direct-io, inode = 0x%pK.\n", inode);
-		// SDP - END BLOCK
+		struct inode *inode = {0};
 
 		return inode;
 	}
