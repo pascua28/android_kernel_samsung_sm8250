@@ -2541,7 +2541,7 @@ static int tcs3407_eol_mode(struct tcs3407_device_data *data)
 
 					state.polarity = PWM_POLARITY_NORMAL;
 
-					ALS_dbg("%s - pwm state en = %d, pe = %d, du = %d, po = %d\n", __func__,
+					ALS_dbg("%s - pwm state en = %d, pe = %lld, du = %lld, po = %d\n", __func__,
 						state.enabled, state.period, state.duty_cycle, state.polarity);
 
 					pwm_apply_state(data->pwm, &state);
@@ -3203,14 +3203,14 @@ static int tcs3407_parse_dt(struct tcs3407_device_data *data)
 	data->pinctrl_out = pinctrl_lookup_state(data->als_pinctrl, "torch_out");
 
 	if (IS_ERR(data->pinctrl_pwm) || IS_ERR(data->pinctrl_out)) {
-		ALS_err("%s - Failed to get pinctrl for pwm, %d %d\n",
+		ALS_err("%s - Failed to get pinctrl for pwm, %ld %ld\n",
 			__func__, PTR_ERR(data->pinctrl_pwm), PTR_ERR(data->pinctrl_out));
 		data->pinctrl_pwm = NULL;
 		data->pinctrl_out = NULL;
 	} else {
 		data->pwm = devm_of_pwm_get(dev, dNode, NULL);
 		if (IS_ERR(data->pwm)) {
-			ALS_err("%s - unable to request PWM %d\n", __func__, PTR_ERR(data->pwm));
+			ALS_err("%s - unable to request PWM %ld\n", __func__, PTR_ERR(data->pwm));
 			data->pwm = NULL;
 		}
 	}
