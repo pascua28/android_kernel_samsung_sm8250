@@ -9,7 +9,11 @@
 #include "fips140_test.h"
 
 // TODO: to be removed
+#ifdef CONFIG_CC_IS_GCC
+#pragma GCC optimize ("O0")
+#else
 #pragma clang optimize off
+#endif
 
 static int __init fips140_post(void)
 {
@@ -115,7 +119,11 @@ static void __exit fips140_fini(void) { }
 module_exit(fips140_fini);
 
 // TODO: to be removed
+#ifdef CONFIG_CC_IS_GCC
+#pragma GCC optimize ("O0")
+#else
 #pragma clang optimize on
+#endif
 
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("FIPS140 POST");

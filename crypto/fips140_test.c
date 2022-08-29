@@ -27,8 +27,11 @@ extern const drbg_test_suite_t drbg_nopr_hmac_sha256_tv;
 extern const kbkdf_test_suite_t kbkdf_hmac_sha512_ctr_nist_tv;
 
 // TODO: to be removed
+#ifdef CONFIG_CC_IS_GCC
+#pragma GCC optimize ("O0")
+#else
 #pragma clang optimize off
-
+#endif
 
 #ifdef CONFIG_CRYPTO_FIPS_FUNC_TEST
 static char *fips_functest_mode;
@@ -764,5 +767,9 @@ int fips140_kat(void)
 }
 
 // TODO: to be removed
+#ifdef CONFIG_CC_IS_GCC
+#pragma GCC optimize ("O0")
+#else
 #pragma clang optimize on
+#endif
 
