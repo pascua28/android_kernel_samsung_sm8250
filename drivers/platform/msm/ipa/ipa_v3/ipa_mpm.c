@@ -2149,7 +2149,7 @@ static void ipa_mpm_read_channel(enum ipa_client_type chan)
 
 	ep = &ipa3_ctx->ep[ipa_ep_idx];
 
-	IPA_MPM_DBG("Reading channel for chan %d, ep = %d, gsi_chan_hdl = %d\n",
+	IPA_MPM_DBG("Reading channel for chan %d, ep = %d, gsi_chan_hdl = %ld\n",
 		chan, ep, ep->gsi_chan_hdl);
 
 	res = ipa3_get_gsi_chan_info(&chan_info, ep->gsi_chan_hdl);
@@ -2273,7 +2273,7 @@ static int ipa_mpm_mhi_probe_cb(struct mhi_device *mhi_dev,
 				ipa_mpm_ctx->uc_fc_db);
 			ch->chan_props.ch_ctx.reserved2 =
 				ipa_mpm_ctx->uc_fc_db_iova;
-			IPA_MPM_DBG("configure reserved2 %lx\n",
+			IPA_MPM_DBG("configure reserved2 %llx\n",
 				ch->chan_props.ch_ctx.reserved2);
 		}
 
@@ -3152,7 +3152,7 @@ static int ipa_mpm_populate_smmu_info(struct platform_device *pdev)
 	cb->va_end = cb->va_start + cb->va_size;
 
 	if (cb->va_end >= ap_cb->va_start) {
-		IPA_MPM_ERR("MPM iommu and AP overlap addr 0x%lx\n",
+		IPA_MPM_ERR("MPM iommu and AP overlap addr 0x%x\n",
 				cb->va_start);
 		ipa_assert();
 		return -EFAULT;
