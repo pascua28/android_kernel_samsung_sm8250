@@ -369,7 +369,7 @@ static int zram_pin_backing_file(struct zram *zram)
 		pr_info("%s failed to compat_alloc_user_space\n", __func__);
 		return -ENOMEM;
 	}
-	copy_to_user(buf, &set, sizeof(int));
+	ret = copy_to_user(buf, &set, sizeof(int));
 	ret = file->f_op->unlocked_ioctl(file, cmd, (unsigned long)buf);
 	pr_info("%s ioctl to pin file returned %d\n", __func__, ret);
 
