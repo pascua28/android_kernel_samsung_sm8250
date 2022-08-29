@@ -1488,7 +1488,7 @@ static void aggregate_power_update(struct msm_cvp_core *core,
 		} else {
 			i = 1;
 		}
-		dprintk(CVP_PROF, "pwrUpdate %pK fdu %u od %u mpu %u ica %u\n",
+		dprintk(CVP_PROF, "pwrUpdate %dK fdu %u od %u mpu %u ica %u\n",
 			inst->prop.fdu_cycles,
 			inst->prop.od_cycles,
 			inst->prop.mpu_cycles,
@@ -1667,16 +1667,16 @@ static int adjust_bw_freqs(void)
 	min_bw = max_bw/10;
 
 	aggregate_power_request(core, &nrt_pwr, &rt_pwr, cvp_max_rate);
-	dprintk(CVP_DBG, "PwrReq nrt %u %u rt %u %u\n",
+	dprintk(CVP_DBG, "PwrReq nrt %lu %lu rt %lu %lu\n",
 		nrt_pwr.core_sum, nrt_pwr.op_core_sum,
 		rt_pwr.core_sum, rt_pwr.op_core_sum);
 	aggregate_power_update(core, &nrt_pwr, &rt_pwr, cvp_max_rate);
-	dprintk(CVP_DBG, "PwrUpdate nrt %u %u rt %u %u\n",
+	dprintk(CVP_DBG, "PwrUpdate nrt %lu %lu rt %lu %lu\n",
 		nrt_pwr.core_sum, nrt_pwr.op_core_sum,
 		rt_pwr.core_sum, rt_pwr.op_core_sum);
 
 	if (rt_pwr.core_sum > cvp_max_rate) {
-		dprintk(CVP_WARN, "%s clk vote out of range %lld\n",
+		dprintk(CVP_WARN, "%s clk vote out of range %ld\n",
 			__func__, rt_pwr.core_sum);
 		return -ENOTSUPP;
 	}
@@ -1703,7 +1703,7 @@ static int adjust_bw_freqs(void)
 	bw_sum = (bw_sum > max_bw) ? max_bw : bw_sum;
 	bw_sum = (bw_sum < min_bw) ? min_bw : bw_sum;
 
-	dprintk(CVP_PROF, "%s %lld %lld\n", __func__,
+	dprintk(CVP_PROF, "%s %ld %ld\n", __func__,
 		core_sum, bw_sum);
 	if (!cl->has_scaling) {
 		dprintk(CVP_ERR, "Cannot scale CVP clock\n");
@@ -1713,7 +1713,7 @@ static int adjust_bw_freqs(void)
 	mutex_unlock(&core->lock);
 	rc = msm_bus_scale_update_bw(bus->client, bw_sum, 0);
 	if (rc) {
-		dprintk(CVP_ERR, "Failed voting bus %s to ab %u\n",
+		dprintk(CVP_ERR, "Failed voting bus %s to ab %lu\n",
 			bus->name, bw_sum);
 		goto exit;
 	}
@@ -1721,7 +1721,7 @@ static int adjust_bw_freqs(void)
 	rc = call_hfi_op(hdev, scale_clocks, hdev->hfi_device_data, core_sum);
 	if (rc)
 		dprintk(CVP_ERR,
-			"Failed to set clock rate %u %s: %d %s\n",
+			"Failed to set clock rate %lu %s: %d %s\n",
 			core_sum, cl->name, rc, __func__);
 
 exit:

@@ -234,7 +234,7 @@ static int hfi_process_session_init_done(u32 device_id,
 		struct msm_cvp_cb_info *info)
 {
 	struct msm_cvp_cb_cmd_done cmd_done = {0};
-	struct cvp_hal_session_init_done session_init_done = { {0} };
+	struct cvp_hal_session_init_done session_init_done = {0};
 
 	dprintk(CVP_DBG, "RECEIVED: SESSION_INIT_DONE[%x]\n", pkt->session_id);
 
@@ -519,7 +519,7 @@ static int hfi_process_session_cvp_msg(u32 device_id,
 			return _deprecated_hfi_msg_process(device_id,
 				pkt, info, inst);
 		}
-		dprintk(CVP_ERR, "Invalid deprecate_bitmask %#x\n",
+		dprintk(CVP_ERR, "Invalid deprecate_bitmask %#lx\n",
 					inst->deprecate_bitmask);
 	}
 
@@ -532,7 +532,7 @@ static int hfi_process_session_cvp_msg(u32 device_id,
 	memcpy(&sess_msg->pkt, pkt, get_msg_size());
 
 	dprintk(CVP_DBG,
-		"%s: Received msg %x cmd_done.status=%d sessionid=%x\n",
+		"%s: Received msg %x cmd_done.status=%d sessionid=%p\n",
 		__func__, pkt->packet_type,
 		hfi_map_err_status(get_msg_errorcode(pkt)), session_id);
 
@@ -577,7 +577,7 @@ static int hfi_process_session_cvp_dme(u32 device_id,
 	cmd_done.size = 0;
 
 	dprintk(CVP_DBG,
-		"%s: device_id=%d cmd_done.status=%d sessionid=%#x\n",
+		"%s: device_id=%d cmd_done.status=%d sessionid=%#p\n",
 		__func__, device_id, cmd_done.status, cmd_done.session_id);
 	info->response_type = HAL_SESSION_DME_FRAME_CMD_DONE;
 	info->response.cmd = cmd_done;
@@ -605,7 +605,7 @@ static int hfi_process_session_cvp_ica(u32 device_id,
 	cmd_done.size = 0;
 
 	dprintk(CVP_DBG,
-		"%s: device_id=%d cmd_done.status=%d sessionid=%#x\n",
+		"%s: device_id=%d cmd_done.status=%d sessionid=%#p\n",
 		__func__, device_id, cmd_done.status, cmd_done.session_id);
 	info->response_type = HAL_SESSION_ICA_FRAME_CMD_DONE;
 	info->response.cmd = cmd_done;
@@ -633,7 +633,7 @@ static int hfi_process_session_cvp_fd(u32 device_id,
 	cmd_done.size = 0;
 
 	dprintk(CVP_DBG,
-		"%s: device_id=%d cmd_done.status=%d sessionid=%#x\n",
+		"%s: device_id=%d cmd_done.status=%d sessionid=%#p\n",
 		__func__, device_id, cmd_done.status, cmd_done.session_id);
 	info->response_type = HAL_SESSION_FD_FRAME_CMD_DONE;
 	info->response.cmd = cmd_done;
