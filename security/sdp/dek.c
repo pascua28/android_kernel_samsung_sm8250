@@ -1093,7 +1093,7 @@ static long dek_do_ioctl_req(unsigned int minor, unsigned int cmd,
 		memset(tempPlain_dek->buf, 0, DEK_MAXLEN);
 
 		if (ret < 0) {
-			DEK_LOGE("DEK_ENCRYPT_DEK: failed to encrypt dek! (err:%d)\n", ret);
+			DEK_LOGE("DEK_ENCRYPT_DEK: failed to encrypt dek! (err:%d)\n", (int)ret);
 			zero_out((char *)&req, sizeof(dek_arg_encrypt_dek));
 			kzfree(tempPlain_dek);
 			kzfree(tempEnc_dek);
