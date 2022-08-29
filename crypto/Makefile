@@ -13,6 +13,7 @@ obj-$(CONFIG_CRYPTO_FIPS) += fips140_first_file.o
 obj-$(CONFIG_CRYPTO_FIPS) += fips140_integrity.o
 obj-$(CONFIG_CRYPTO_FIPS) += fips140_post.o
 obj-$(CONFIG_CRYPTO_FIPS) += fips140_test.o
+CFLAGS_fips140_test.o += -D__NO_FORTIFY
 obj-$(CONFIG_CRYPTO_FIPS) += fips140_test_tv.o
 obj-$(CONFIG_CRYPTO_FIPS) += fips.o
 
