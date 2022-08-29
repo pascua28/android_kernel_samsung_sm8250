@@ -2493,7 +2493,7 @@ static int fts_power_ctrl(void *data, bool on)
 			retval = regulator_disable(info->regulator_avdd);
 			if (retval) {
 				input_err(true, dev, "%s: Failed to disable avdd: %d\n", __func__, retval);
-				regulator_enable(info->regulator_dvdd);
+				retval = regulator_enable(info->regulator_dvdd);
 				goto out;
 			}
 		} else {
@@ -2513,9 +2513,6 @@ static int fts_power_ctrl(void *data, bool on)
 			regulator_is_enabled(info->regulator_dvdd) ? "on" : "off");
 
 out:
-//	regulator_put(regulator_dvdd);
-//	regulator_put(regulator_avdd);
-
 	boot_on = false;
 
 	return retval;
