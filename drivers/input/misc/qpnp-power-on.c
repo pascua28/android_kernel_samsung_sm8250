@@ -1017,7 +1017,7 @@ static int qpnp_pon_input_dispatch(struct qpnp_pon *pon, u32 pon_type)
 	struct qpnp_pon_config *cfg = NULL;
 	u8  pon_rt_bit = 0;
 	u32 key_status;
-	uint pon_rt_sts, pon_rt_sts_ori;
+	uint pon_rt_sts = 0, pon_rt_sts_ori;
 	u64 elapsed_us;
 	int rc;
 	u8 first = 1;
