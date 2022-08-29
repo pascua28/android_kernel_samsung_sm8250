@@ -396,7 +396,7 @@ static void fallocate_block(struct zram *zram, unsigned long blk_idx)
 		file_start_write(file);
 		ret = file->f_op->fallocate(file, mode, pos, len);
 		if (ret)
-			pr_err("%s pos %lx failed %d\n", __func__, pos, ret);
+			pr_err("%s pos %llx failed %d\n", __func__, pos, ret);
 		file_end_write(file);
 	}
 	mutex_unlock(&zram->blk_bitmap_lock);
