@@ -141,3 +141,4 @@ techpack/
 
 *.out
 out/
+zImage
