@@ -142,3 +142,5 @@ techpack/
 *.out
 out/
 zImage
+*.zip
+*.pyc
