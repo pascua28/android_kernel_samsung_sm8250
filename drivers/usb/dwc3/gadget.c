@@ -2540,7 +2540,7 @@ static int dwc3_gadget_pullup(struct usb_gadget *g, int is_on)
 
 	pr_info("usb: %s is_on: %d\n", __func__, is_on);
 	if ((dwc3_is_otg_or_drd(dwc) && !dwc->vbus_active)
-			|| !dwc->gadget_driver || dwc->err_evt_seen) {
+		|| !dwc->gadget_driver || dwc->err_evt_seen) {
 		/*
 		 * Need to wait for vbus_session(on) from otg driver or to
 		 * the udc_start.

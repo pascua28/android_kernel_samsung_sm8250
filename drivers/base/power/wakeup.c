@@ -15,16 +15,15 @@
 #include <linux/seq_file.h>
 #include <linux/debugfs.h>
 #include <linux/pm_wakeirq.h>
-#include <linux/types.h>
+#include <linux/irq.h>
+#include <linux/irqdesc.h>
+#include <linux/wakeup_reason.h>
 #include <trace/events/power.h>
 #include <linux/irq.h>
 #include <linux/interrupt.h>
 #include <linux/irqdesc.h>
 
 #include "power.h"
-#ifdef CONFIG_SEC_PM
-#include <linux/wakeup_reason.h>
-#endif
 
 #ifndef CONFIG_SUSPEND
 suspend_state_t pm_suspend_target_state;
@@ -862,7 +861,7 @@ void pm_print_active_wakeup_sources(void)
 	srcuidx = srcu_read_lock(&wakeup_srcu);
 	list_for_each_entry_rcu(ws, &wakeup_sources, entry) {
 		if (ws->active) {
-			pr_info("active wakeup source: %s\n", ws->name);
+			pr_debug("active wakeup source: %s\n", ws->name);
 			active = 1;
 		} else if (!active &&
 			   (!last_activity_ws ||
@@ -873,7 +872,7 @@ void pm_print_active_wakeup_sources(void)
 	}
 
 	if (!active && last_activity_ws)
-		pr_info("last active wakeup source: %s\n",
+		pr_debug("last active wakeup source: %s\n",
 			last_activity_ws->name);
 	srcu_read_unlock(&wakeup_srcu, srcuidx);
 }
@@ -891,6 +890,7 @@ bool pm_wakeup_pending(void)
 {
 	unsigned long flags;
 	bool ret = false;
+	char suspend_abort[MAX_SUSPEND_ABORT_LEN];
 
 	raw_spin_lock_irqsave(&events_lock, flags);
 	if (events_check_enabled) {
@@ -903,8 +903,10 @@ bool pm_wakeup_pending(void)
 	raw_spin_unlock_irqrestore(&events_lock, flags);
 
 	if (ret) {
-		pr_info("PM: Wakeup pending, aborting suspend\n");
-		pm_print_active_wakeup_sources();
+		pm_get_active_wakeup_sources(suspend_abort,
+					     MAX_SUSPEND_ABORT_LEN);
+		log_suspend_abort_reason(suspend_abort);
+		pr_info("PM: %s\n", suspend_abort);
 	}
 
 	return ret || atomic_read(&pm_abort_suspend) > 0;
@@ -931,26 +933,19 @@ void pm_wakeup_clear(bool reset)
 
 void pm_system_irq_wakeup(unsigned int irq_number)
 {
-#ifndef CONFIG_SEC_PM
-	struct irq_desc *desc;
-	const char *name = "null";
-#endif
-
 	if (pm_wakeup_irq == 0) {
-		if (msm_show_resume_irq_mask) {
-#ifndef CONFIG_SEC_PM
-			desc = irq_to_desc(irq_number);
-			if (desc == NULL)
-				name = "stray irq";
-			else if (desc->action && desc->action->name)
-				name = desc->action->name;
+		struct irq_desc *desc;
+		const char *name = "null";
 
-			pr_warn("%s: %d triggered %s\n", __func__,
-					irq_number, name);
-#else
-			log_wakeup_reason(irq_number);
-#endif
-		}
+		desc = irq_to_desc(irq_number);
+		if (desc == NULL)
+			name = "stray irq";
+		else if (desc->action && desc->action->name)
+			name = desc->action->name;
+
+		log_irq_wakeup_reason(irq_number);
+		pr_warn("%s: %d triggered %s\n", __func__, irq_number, name);
+
 		pm_wakeup_irq = irq_number;
 		pm_system_wakeup();
 	}
@@ -1155,61 +1150,6 @@ static int wakeup_sources_stats_seq_show(struct seq_file *m, void *v)
 
 	return 0;
 }
-
-#ifdef CONFIG_SEC_PM_DEBUG
-static int print_wakeup_source_active(
-				     struct wakeup_source *ws)
-{
-	unsigned long flags;
-	ktime_t total_time;
-	unsigned long active_count;
-	ktime_t active_time;
-	ktime_t prevent_sleep_time;
-	int ret;
-
-	spin_lock_irqsave(&ws->lock, flags);
-
-	total_time = ws->total_time;
-	prevent_sleep_time = ws->prevent_sleep_time;
-	active_count = ws->active_count;
-	if (ws->active) {
-		ktime_t now = ktime_get();
-
-		active_time = ktime_sub(now, ws->last_time);
-		total_time = ktime_add(total_time, active_time);
-
-		if (ws->autosleep_enabled)
-			prevent_sleep_time = ktime_add(prevent_sleep_time,
-				ktime_sub(now, ws->start_prevent_time));
-	} else {
-		active_time = ktime_set(0, 0);
-	}
-
-	ret = pr_info("%s: active_count(%lu), active_time(%lld), total_time(%lld)\n",
-			ws->name, active_count,
-			ktime_to_ms(active_time), ktime_to_ms(total_time));
-
-	spin_unlock_irqrestore(&ws->lock, flags);
-
-	return ret;
-}
-
-int wakeup_sources_stats_active(void)
-{
-	struct wakeup_source *ws;
-
-	pr_info("Active wake lock:\n");
-
-	rcu_read_lock();
-	list_for_each_entry_rcu(ws, &wakeup_sources, entry)
-		if (ws->active)
-			print_wakeup_source_active(ws);
-	rcu_read_unlock();
-
-	return 0;
-}
-EXPORT_SYMBOL_GPL(wakeup_sources_stats_active);
-#endif
 
 static const struct seq_operations wakeup_sources_stats_seq_ops = {
 	.start = wakeup_sources_stats_seq_start,

@@ -1166,10 +1166,9 @@ static int a6xx_gmu_load_firmware(struct kgsl_device *device)
 
 	/* GMU fw already saved and verified so do nothing new */
 	if (!gmu->fw_image) {
-		if (a6xx_core->gmufw_name == NULL) {
-			dev_err(&gmu->pdev->dev, "Invalid gmufw_name\n");
+
+		if (a6xx_core->gmufw_name == NULL)
 			return -EINVAL;
-		}
 
 		ret = request_firmware(&gmu->fw_image, a6xx_core->gmufw_name,
 				device->dev);

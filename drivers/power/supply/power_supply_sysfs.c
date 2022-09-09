@@ -66,6 +66,7 @@ static const char * const power_supply_health_text[] = {
 	"Unknown", "Good", "Overheat", "Dead", "Over voltage",
 	"Unspecified failure", "Cold", "Watchdog timer expire",
 	"Safety timer expire",
+	"Over current",
 	"Warm", "Cool", "Hot",
 	"Under voltage", "OverheatLimit"
 };

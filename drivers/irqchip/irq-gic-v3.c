@@ -29,6 +29,7 @@
 #include <linux/percpu.h>
 #include <linux/slab.h>
 #include <linux/msm_rtb.h>
+#include <linux/wakeup_reason.h>
 
 #include <linux/irqchip.h>
 #include <linux/irqchip/arm-gic-common.h>
@@ -43,10 +44,6 @@
 #include <linux/syscore_ops.h>
 
 #include "irq-gic-common.h"
-
-#ifdef CONFIG_SEC_PM
-#include <linux/wakeup_reason.h>
-#endif
 
 struct redist_region {
 	void __iomem		*redist_base;
@@ -347,6 +344,29 @@ static int gic_suspend(void)
 	return 0;
 }
 
+/*
+ * gic_show_pending_irq - Shows the pending interrupts
+ * Note: Interrupts should be disabled on the cpu from which
+ * this is called to get accurate list of pending interrupts.
+ */
+void gic_show_pending_irqs(void)
+{
+	void __iomem *base;
+	u32 pending, enabled;
+	unsigned int j;
+
+	base = gic_data.dist_base;
+	for (j = 0; j * 32 < gic_data.irq_nr; j++) {
+		enabled = readl_relaxed(base +
+					GICD_ISENABLER + j * 4);
+		pending = readl_relaxed(base +
+					GICD_ISPENDR + j * 4);
+		pr_err("Pending and enabled irqs[%d] %x %x\n", j,
+				pending, enabled);
+
+	}
+}
+
 static void gic_show_resume_irq(struct gic_chip_data *gic)
 {
 	unsigned int i;
@@ -367,7 +387,6 @@ static void gic_show_resume_irq(struct gic_chip_data *gic)
 	     i < gic->irq_nr;
 	     i = find_next_bit((unsigned long *)pending, gic->irq_nr, i+1)) {
 		unsigned int irq = irq_find_mapping(gic->domain, i);
-#ifndef CONFIG_SEC_PM
 		struct irq_desc *desc = irq_to_desc(irq);
 		const char *name = "null";
 
@@ -377,9 +396,6 @@ static void gic_show_resume_irq(struct gic_chip_data *gic)
 			name = desc->action->name;
 
 		pr_warn("%s: %d triggered %s\n", __func__, irq, name);
-#else
-		log_wakeup_reason(irq);
-#endif
 	}
 }
 
@@ -438,6 +454,8 @@ static asmlinkage void __exception_irq_entry gic_handle_irq(struct pt_regs *regs
 			err = handle_domain_irq(gic_data.domain, irqnr, regs);
 			if (err) {
 				WARN_ONCE(true, "Unexpected interrupt received!\n");
+				log_abnormal_wakeup_reason(
+						"unexpected HW IRQ %u", irqnr);
 				if (static_branch_likely(&supports_deactivate_key)) {
 					if (irqnr < 8192)
 						gic_write_dir(irqnr);
