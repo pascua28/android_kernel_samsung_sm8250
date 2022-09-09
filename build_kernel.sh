@@ -3,8 +3,8 @@
 export ARCH=arm64
 mkdir out
 
-BUILD_CROSS_COMPILE=/home/pascua14/gcc-7.4.1/bin/aarch64-linux-gnu-
-KERNEL_LLVM_BIN=/home/pascua14/clang/bin/clang
+BUILD_CROSS_COMPILE=/home/pascua14/gcc7/bin/aarch64-linux-gnu-
+KERNEL_LLVM_BIN=/home/pascua14/llvm-12/bin/clang
 CLANG_TRIPLE=aarch64-linux-gnu-
 KERNEL_MAKE_ENV="DTC_EXT=$(pwd)/tools/dtc CONFIG_BUILD_ARM64_DT_OVERLAY=y"
 
