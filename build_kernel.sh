@@ -4,7 +4,6 @@ export ARCH=arm64
 mkdir out
 
 BUILD_CROSS_COMPILE=/home/pascua14/gcc7/bin/aarch64-linux-gnu-
-KERNEL_LLVM_BIN=/home/pascua14/llvm-12/bin/clang
 CLANG_TRIPLE=aarch64-linux-gnu-
 KERNEL_MAKE_ENV="DTC_EXT=$(pwd)/tools/dtc CONFIG_BUILD_ARM64_DT_OVERLAY=y"
 
@@ -14,7 +13,8 @@ echo "(1) 4G Variant"
 echo "(2) 5G Variant"
 read -p "Selected variant: " variant
 
-make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 CROSS_COMPILE=$BUILD_CROSS_COMPILE CC=$KERNEL_LLVM_BIN CLANG_TRIPLE=$CLANG_TRIPLE r8q_defconfig
+make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 CROSS_COMPILE=$BUILD_CROSS_COMPILE \
+	CLANG_DIR="/home/pascua14/llvm-12/bin/" LLVM=1 CLANG_TRIPLE=$CLANG_TRIPLE r8q_defconfig
 
 if [ $variant == "1" ]; then
 	echo "
@@ -44,11 +44,13 @@ CONFIG_FIVE
 # CONFIG_FIVE is not set
 " >> out/.config
 
-make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 CROSS_COMPILE=$BUILD_CROSS_COMPILE CC=$KERNEL_LLVM_BIN CLANG_TRIPLE=$CLANG_TRIPLE oldconfig
+make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 CROSS_COMPILE=$BUILD_CROSS_COMPILE \
+	CLANG_DIR="/home/pascua14/llvm-12/bin/" LLVM=1 CLANG_TRIPLE=$CLANG_TRIPLE oldconfig
 
 fi
 
-make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 CROSS_COMPILE=$BUILD_CROSS_COMPILE CC=$KERNEL_LLVM_BIN CLANG_TRIPLE=$CLANG_TRIPLE
+make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 CROSS_COMPILE=$BUILD_CROSS_COMPILE \
+	CLANG_DIR="/home/pascua14/llvm-12/bin/" LLVM=1 CLANG_TRIPLE=$CLANG_TRIPLE
 
 IMAGE="out/arch/arm64/boot/Image.gz-dtb"
 
