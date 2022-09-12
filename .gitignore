@@ -144,3 +144,4 @@ out/
 *.gz
 *.pyc
 *.out
+zImage
