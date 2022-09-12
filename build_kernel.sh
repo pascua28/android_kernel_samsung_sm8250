@@ -11,22 +11,46 @@ echo "**********************************"
 echo "Select variant (Snapdragon only)"
 echo "(1) ThinLTO build"
 echo "(2) Full LTO build"
+echo "(3) Non-LTO build"
 read -p "Selected variant: " variant
 
 make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 CROSS_COMPILE=$BUILD_CROSS_COMPILE \
 	CLANG_DIR="/home/pascua14/llvm-12/bin/" LLVM=1 CLANG_TRIPLE=$CLANG_TRIPLE r8q_defconfig
 
+scripts/configcleaner "
+CONFIG_LTO
+CONFIG_THINLTO
+CONFIG_LTO_NONE
+CONFIG_LTO_CLANG
+CONFIG_CFI_CLANG"
+
 if [ $variant == "1" ]; then
 
 scripts/configcleaner "CONFIG_THINLTO"
 
-echo "CONFIG_THINLTO=y" >> out/.config
+echo "
+CONFIG_LTO=y
+CONFIG_THINLTO=y
+# CONFIG_LTO_NONE is not set
+CONFIG_LTO_CLANG=y
+# CONFIG_CFI_CLANG is not set" >> out/.config
 
 elif [ $variant == "2" ]; then
 
 scripts/configcleaner "CONFIG_THINLTO"
 
-echo "CONFIG_THINLTO=n" >> out/.config
+echo "
+CONFIG_LTO=y
+# CONFIG_THINLTO is not set
+# CONFIG_LTO_NONE is not set
+CONFIG_LTO_CLANG=y
+# CONFIG_CFI_CLANG is not set" >> out/.config
+
+elif [ $variant == "3" ]; then
+
+echo "
+CONFIG_LTO_NONE=y
+# CONFIG_LTO_CLANG is not set" >> out/.config
 
 fi
 
