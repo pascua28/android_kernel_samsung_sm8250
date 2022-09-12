@@ -439,10 +439,6 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -std=gnu89 \
 		   -pipe
 KBUILD_CFLAGS	+= -DPLATFORM_VERSION=11.0.0
-
-# Optimize Clang build for sm8250
-KBUILD_CFLAGS	+= -mcpu=cortex-a77 -mtune=cortex-a77
-
 KBUILD_CPPFLAGS := -D__KERNEL__
 KBUILD_AFLAGS_KERNEL :=
 KBUILD_CFLAGS_KERNEL :=
