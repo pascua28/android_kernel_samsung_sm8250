@@ -8238,7 +8238,7 @@ static int find_energy_efficient_cpu(struct task_struct *p, int prev_cpu,
 	cpumask_t *candidates;
 	bool is_rtg, curr_is_rtg;
 	struct find_best_target_env fbt_env;
-	bool need_idle = wake_to_idle(p);
+	bool need_idle = wake_to_idle(p) || uclamp_latency_sensitive(p);
 	int placement_boost = task_boost_policy(p);
 	u64 start_t = 0;
 	int delta = 0;
