@@ -1416,7 +1416,18 @@ unsigned int uclamp_task(struct task_struct *p)
 
 bool uclamp_boosted(struct task_struct *p)
 {
-	return uclamp_eff_value(p, UCLAMP_MIN) > 0;
+	struct cgroup_subsys_state *css = task_css(p, cpuset_cgrp_id);
+	struct task_group *tg;
+
+	if (!css)
+		return false;
+
+	if (!strlen(css->cgroup->kn->name))
+		return 0;
+
+	tg = container_of(css, struct task_group, css);
+
+	return tg->boosted;
 }
 
 bool uclamp_latency_sensitive(struct task_struct *p)
@@ -1509,7 +1520,7 @@ unsigned int uclamp_task(struct task_struct *p)
 	return util;
 }
 
-bool uclamp_boosted(struct task_struct *p)
+static inline bool uclamp_boosted(struct task_struct *p)
 {
 #ifdef CONFIG_SCHED_TUNE
 	return schedtune_task_boost(p) > 0;
