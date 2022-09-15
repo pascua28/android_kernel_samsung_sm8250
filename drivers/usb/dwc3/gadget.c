@@ -1792,6 +1792,7 @@ static int __dwc3_gadget_kick_transfer(struct dwc3_ep *dep)
 			return ret;
 		}
 
+		dbg_event(0xFF, "GADGET_EP_CMD Failure", ret);
 		dwc3_stop_active_transfer(dwc, dep->number, true);
 
 		list_for_each_entry_safe(req, n, &dep->started_list, list)
