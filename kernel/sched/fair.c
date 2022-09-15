@@ -8058,6 +8058,17 @@ compute_energy(struct task_struct *p, int dst_cpu, struct perf_domain *pd)
 	return energy;
 }
 
+/*
+ * Remove and clamp on negative, from a local variable.
+ *
+ * A variant of sub_positive(), which does not use explicit load-store
+ * and is thus optimized for local variable updates.
+ */
+#define lsub_positive(_ptr, _val) do {				\
+	typeof(_ptr) ptr = (_ptr);				\
+	*ptr -= min_t(typeof(*ptr), *ptr, _val);		\
+} while (0)
+
 static void select_cpu_candidates(struct sched_domain *sd, cpumask_t *cpus,
 		struct perf_domain *pd, struct task_struct *p, int prev_cpu)
 {
