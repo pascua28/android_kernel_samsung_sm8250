@@ -115,12 +115,12 @@
 
 #define WAKEBYTE_TIMEOUT_MSEC	(2000)
 #define WAIT_XFER_MAX_ITER	(2)
-#define WAIT_XFER_MAX_TIMEOUT_US	(10000)
-#define WAIT_XFER_MIN_TIMEOUT_US	(9000)
-#define IPC_LOG_PWR_PAGES	(12)
-#define IPC_LOG_MISC_PAGES	(160)
-#define IPC_LOG_TX_RX_PAGES	(64)
-#define DATA_BYTES_PER_LINE	(64)
+#define WAIT_XFER_MAX_TIMEOUT_US	(150)
+#define WAIT_XFER_MIN_TIMEOUT_US	(100)
+#define IPC_LOG_PWR_PAGES	(10)
+#define IPC_LOG_MISC_PAGES	(30)
+#define IPC_LOG_TX_RX_PAGES	(30)
+#define DATA_BYTES_PER_LINE	(32)
 
 #define M_IRQ_BITS		(M_RX_FIFO_WATERMARK_EN | M_RX_FIFO_LAST_EN |\
 				M_CMD_CANCEL_EN | M_CMD_ABORT_EN |\
@@ -262,6 +262,8 @@ static void msm_geni_serial_set_manual_flow(bool enable,
 static bool handle_rx_dma_xfer(u32 s_irq_status, struct uart_port *uport);
 static int uart_line_id;
 
+static bool is_earlycon;
+
 #define GET_DEV_PORT(uport) \
 	container_of(uport, struct msm_geni_serial_port, uport)
 
@@ -298,7 +300,14 @@ static int msm_geni_serial_spinlocked(struct uart_port *uport)
 static void msm_geni_serial_enable_interrupts(struct uart_port *uport)
 {
 	unsigned int geni_m_irq_en, geni_s_irq_en;
-	struct msm_geni_serial_port *port = GET_DEV_PORT(uport);
+	struct msm_geni_serial_port *port = NULL;
+
+	/*
+	 * Earlyconsole also uses this API and finds port is NULL,
+	 * hence add a protective check.
+	 */
+	if (!is_earlycon)
+		port = GET_DEV_PORT(uport);
 
 	geni_m_irq_en = geni_read_reg_nolog(uport->membase,
 						SE_GENI_M_IRQ_EN);
@@ -310,7 +319,7 @@ static void msm_geni_serial_enable_interrupts(struct uart_port *uport)
 
 	geni_write_reg_nolog(geni_m_irq_en, uport->membase, SE_GENI_M_IRQ_EN);
 	geni_write_reg_nolog(geni_s_irq_en, uport->membase, SE_GENI_S_IRQ_EN);
-	if (port->xfer_mode == SE_DMA) {
+	if (port && port->xfer_mode == SE_DMA) {
 		geni_write_reg_nolog(DMA_TX_IRQ_BITS, uport->membase,
 							SE_DMA_TX_IRQ_EN_SET);
 		geni_write_reg_nolog(DMA_RX_IRQ_BITS, uport->membase,
@@ -1432,7 +1441,8 @@ static void start_rx_sequencer(struct uart_port *uport)
 	if (geni_status & S_GENI_CMD_ACTIVE) {
 		if (port->xfer_mode == SE_DMA) {
 			IPC_LOG_MSG(port->ipc_log_misc,
-				"%s: GENI: 0x%x\n", __func__, geni_status);
+				"%s: mapping rx dma GENI: 0x%x\n",
+				__func__, geni_status);
 			geni_se_rx_dma_start(uport->membase, DMA_RX_BUF_SIZE,
 								&port->rx_dma);
 		}
@@ -1441,9 +1451,12 @@ static void start_rx_sequencer(struct uart_port *uport)
 		spin_unlock_irqrestore(&uport->lock, flags);
 	}
 
-	if (port->xfer_mode == SE_DMA)
+	if (port->xfer_mode == SE_DMA) {
+		IPC_LOG_MSG(port->ipc_log_misc,
+			"%s. mapping rx dma\n", __func__);
 		geni_se_rx_dma_start(uport->membase, DMA_RX_BUF_SIZE,
 							&port->rx_dma);
+	}
 
 	/* Start RX with the RFR_OPEN to keep RFR in always ready state */
 	msm_geni_serial_enable_interrupts(uport);
@@ -1513,6 +1526,7 @@ static int stop_rx_sequencer(struct uart_port *uport)
 	bool is_rx_active;
 	unsigned int stale_delay;
 	u32 dma_rx_status, s_irq_status;
+	int usage_count;
 
 	IPC_LOG_MSG(port->ipc_log_misc, "%s\n", __func__);
 
@@ -1555,6 +1569,15 @@ static int stop_rx_sequencer(struct uart_port *uport)
 			IPC_LOG_MSG(port->ipc_log_misc, "%s: Interrupt delay: dma_rx_status:0x%x, s_irq_status:0x%x\n",
 											__func__, dma_rx_status, s_irq_status);
 			handle_rx_dma_xfer(s_irq_status, uport);
+			if (!port->ioctl_count) {
+				usage_count = atomic_read(
+						&uport->dev->power.usage_count);
+				IPC_LOG_MSG(port->ipc_log_misc,
+					"%s: Abort Stop Rx, extend the PM timer, usage_count:%d\n",
+					__func__, usage_count);
+				pm_runtime_mark_last_busy(uport->dev);
+				return -EBUSY;
+			}
 		}
 	}
 
@@ -1998,6 +2021,8 @@ static bool handle_rx_dma_xfer(u32 s_irq_status, struct uart_port *uport)
 			msm_geni_serial_handle_dma_rx(uport,
 			drop_rx);
 			if (!(dma_rx_status & RX_GENI_CANCEL_IRQ)) {
+				IPC_LOG_MSG(msm_port->ipc_log_misc,
+				"%s. mapping rx dma\n", __func__);
 				geni_se_rx_dma_start(uport->membase,
 				DMA_RX_BUF_SIZE, &msm_port->rx_dma);
 			} else {
@@ -2076,12 +2101,8 @@ static void msm_geni_serial_handle_isr(struct uart_port *uport,
 		goto exit_geni_serial_isr;
 	}
 
-	if (m_irq_status & (M_IO_DATA_ASSERT_EN | M_IO_DATA_DEASSERT_EN)) {
+	if (m_irq_status & (M_IO_DATA_ASSERT_EN | M_IO_DATA_DEASSERT_EN))
 		uport->icount.cts++;
-		IPC_LOG_MSG(msm_port->ipc_log_misc,
-			"%s. cts counter:%d\n", __func__,
-				uport->icount.cts);
-	}
 
 	if (s_irq_status & S_RX_FIFO_WR_ERR_EN) {
 		uport->icount.overrun++;
@@ -2973,6 +2994,7 @@ msm_geni_serial_earlycon_setup(struct earlycon_device *dev,
 	unsigned long clk_rate;
 	unsigned long cfg0, cfg1;
 
+	is_earlycon = true;
 	if (!uport->membase) {
 		ret = -ENOMEM;
 		goto exit_geni_serial_earlyconsetup;
@@ -3604,6 +3626,13 @@ static int msm_geni_serial_probe(struct platform_device *pdev)
 	if (!uart_console(uport))
 		spin_lock_init(&dev_port->rx_lock);
 
+	/*
+	 * Earlyconsole to kernel console will switch happen after
+	 * uart_add_one_port. Hence marking is_earlycon to false here.
+	 */
+	if (is_console)
+		is_earlycon = false;
+
 	IPC_LOG_MSG(dev_port->ipc_log_misc, "%s: port:%s irq:%d\n", __func__,
 		    uport->name, uport->irq);
 
@@ -3660,8 +3689,7 @@ static int msm_geni_serial_runtime_suspend(struct device *dev)
 	u32 geni_status = geni_read_reg_nolog(port->uport.membase,
 							SE_GENI_STATUS);
 
-	IPC_LOG_MSG(port->ipc_log_pwr, "%s++\n", __func__);
-
+	IPC_LOG_MSG(port->ipc_log_pwr, "%s: Start\n", __func__);
 	wait_for_transfers_inflight(&port->uport);
 	/*
 	 * Manual RFR On.
@@ -3673,10 +3701,12 @@ static int msm_geni_serial_runtime_suspend(struct device *dev)
 	if (ret) {
 		IPC_LOG_MSG(port->ipc_log_pwr, "%s: stop rx failed %d\n",
 							__func__, ret);
+		/* Flow on from UART */
+		msm_geni_serial_allow_rx(port);
 		return -EBUSY;
 	}
-	geni_status = geni_read_reg_nolog(port->uport.membase, SE_GENI_STATUS);
 
+	geni_status = geni_read_reg_nolog(port->uport.membase, SE_GENI_STATUS);
 	if ((geni_status & M_GENI_CMD_ACTIVE))
 		stop_tx_sequencer(&port->uport);
 
@@ -3700,7 +3730,7 @@ static int msm_geni_serial_runtime_suspend(struct device *dev)
 		port->edge_count = 0;
 		enable_irq(port->wakeup_irq);
 	}
-	IPC_LOG_MSG(port->ipc_log_pwr, "%s:\n", __func__);
+	IPC_LOG_MSG(port->ipc_log_pwr, "%s: End\n", __func__);
 	__pm_relax(port->geni_wake);
 exit_runtime_suspend:
 	return ret;
