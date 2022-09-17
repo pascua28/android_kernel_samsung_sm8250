@@ -158,9 +158,7 @@ static void default_key_adjust_sector_size_and_iv(char **argv,
 
 		memcpy(raw, key_new.bytes, size);
 
-		if ((ti->len & (((*dkc)->sector_size >> SECTOR_SHIFT) - 1)) ||
-		    ((*dkc)->dev->bdev->bd_disk->disk_name[0] &&
-		     !strcmp((*dkc)->dev->bdev->bd_disk->disk_name, "mmcblk0")))
+		if (ti->len & (((*dkc)->sector_size >> SECTOR_SHIFT) - 1))
 			(*dkc)->sector_size = SECTOR_SIZE;
 
 		if (dev->bdev->bd_part)
