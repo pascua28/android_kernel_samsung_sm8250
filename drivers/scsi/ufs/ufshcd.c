@@ -2802,7 +2802,9 @@ start:
 		 * If the timer was active but the callback was not running
 		 * we have nothing to do, just change state and return.
 		 */
-		if (hrtimer_try_to_cancel(&hba->clk_gating.gate_hrtimer) == 1) {
+		if ((hrtimer_try_to_cancel(&hba->clk_gating.gate_hrtimer) == 1)
+			&& !(work_pending(&hba->clk_gating.gate_work))
+			&& !hba->clk_gating.gate_wk_in_process) {
 			hba->clk_gating.state = CLKS_ON;
 			trace_ufshcd_clk_gating(dev_name(hba->dev),
 						hba->clk_gating.state);
@@ -2854,7 +2856,9 @@ static void ufshcd_gate_work(struct work_struct *work)
 						clk_gating.gate_work);
 	unsigned long flags;
 
+	hba->clk_gating.gate_wk_in_process = true;
 	spin_lock_irqsave(hba->host->host_lock, flags);
+
 	if (hba->clk_gating.state == CLKS_OFF)
 		goto rel_lock;
 	/*
@@ -2930,6 +2934,7 @@ static void ufshcd_gate_work(struct work_struct *work)
 rel_lock:
 	spin_unlock_irqrestore(hba->host->host_lock, flags);
 out:
+	hba->clk_gating.gate_wk_in_process = false;
 	return;
 }
 
@@ -5320,7 +5325,7 @@ int ufshcd_read_desc_param(struct ufs_hba *hba,
 	}
 
 	/* Check whether we need temp memory */
-	if (param_offset != 0) {
+	if (param_offset != 0 || param_size < buff_len) {
 		desc_buf = kzalloc(buff_len, GFP_KERNEL);
 		if (!desc_buf)
 			return -ENOMEM;
@@ -6764,9 +6769,10 @@ EXPORT_SYMBOL_GPL(ufshcd_config_pwr_mode);
  */
 static int ufshcd_complete_dev_init(struct ufs_hba *hba)
 {
+	int i = 0;
 	int err;
 	bool flag_res = 1;
-	unsigned long timeout;
+	ktime_t timeout;
 
 	err = ufshcd_query_flag_retry(hba, UPIU_QUERY_OPCODE_SET_FLAG,
 		QUERY_FLAG_IDN_FDEVICEINIT, NULL);
@@ -6777,16 +6783,30 @@ static int ufshcd_complete_dev_init(struct ufs_hba *hba)
 		goto out;
 	}
 
-	/* Poll fDeviceInit flag to be cleared */
-	timeout = jiffies + msecs_to_jiffies(DEV_INIT_COMPL_TIMEOUT);
+	/*
+	 * Some vendor devices are taking longer time to complete its internal
+	 * initialization, so set fDeviceInit flag poll time to 5 secs
+	 */
+	timeout = ktime_add_ms(ktime_get(), 5000);
 
-	do {
-		err = ufshcd_query_flag(hba, UPIU_QUERY_OPCODE_READ_FLAG,
-				QUERY_FLAG_IDN_FDEVICEINIT, &flag_res);
-		if (!flag_res)
+	/* poll for max. 5sec for fDeviceInit flag to clear */
+	while (1) {
+		bool timedout = ktime_after(ktime_get(), timeout);
+		err = ufshcd_query_flag_retry(hba, UPIU_QUERY_OPCODE_READ_FLAG,
+					QUERY_FLAG_IDN_FDEVICEINIT, &flag_res);
+		if (err || !flag_res || timedout)
 			break;
-		usleep_range(1000, 1000);
-	} while (time_before(jiffies, timeout));
+
+		/*
+		 * Poll for this flag in a tight loop for first 1000 iterations.
+		 * This is same as old logic which is working for most of the
+		 * devices, so continue using the same.
+		 */
+		if (i == 1000)
+			msleep(20);
+		else
+			i++;
+	}
 
 	if (err)
 		dev_err(hba->dev,
@@ -12176,13 +12196,6 @@ static int ufshcd_resume(struct ufs_hba *hba, enum ufs_pm_op pm_op)
 	/* enable the host irq as host controller would be active soon */
 	ufshcd_enable_irq(hba);
 
-	/* Pull up RST_n before device reset */
-	if (ufshcd_is_link_off(hba)) {
-		ret = ufshcd_deassert_device_reset(hba);
-		if (ret)
-			goto disable_irq_and_vops_clks;
-	}
-
 	/*
 	 * Call vendor specific resume callback. As these callbacks may access
 	 * vendor specific host controller register space call them when the
@@ -12190,7 +12203,7 @@ static int ufshcd_resume(struct ufs_hba *hba, enum ufs_pm_op pm_op)
 	 */
 	ret = ufshcd_vops_resume(hba, pm_op);
 	if (ret)
-		goto assert_device_reset;
+		goto disable_irq_and_vops_clks;
 
 	if (ufshcd_is_link_hibern8(hba)) {
 		ret = ufshcd_uic_hibern8_exit(hba);
@@ -12286,9 +12299,6 @@ set_old_link_state:
 		hba->hibern8_on_idle.state = HIBERN8_ENTERED;
 vendor_suspend:
 	ufshcd_vops_suspend(hba, pm_op);
-assert_device_reset:
-	if (ufshcd_is_link_off(hba))
-		ufshcd_assert_device_reset(hba);
 disable_irq_and_vops_clks:
 	ufshcd_disable_irq(hba);
 	if (hba->clk_scaling.is_allowed)

@@ -4119,7 +4119,6 @@ static int fastrpc_set_process_info(struct fastrpc_file *fl)
 		}
 		fl->debug_buf_alloced_attempted = 1;
 		spin_unlock(&fl->hlock);
-
 		fl->debug_buf = kzalloc(buf_size, GFP_KERNEL);
 		if (!fl->debug_buf) {
 			err = -ENOMEM;

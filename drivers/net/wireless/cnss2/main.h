@@ -397,6 +397,8 @@ struct cnss_plat_data {
 	u8 set_wlaon_pwr_ctrl;
 
 	struct kobject *wifi_kobj;
+	u8 fw_pcie_gen_switch;
+	u8 pcie_gen_speed;
 };
 
 #ifdef CONFIG_ARCH_QCOM

@@ -3337,8 +3337,8 @@ static void binder_transaction(struct binder_proc *proc,
 		freecess_sync_binder_report(proc, target_proc, tr);
 #endif
 
-		if (security_binder_transaction(proc->cred,
-						target_proc->cred) < 0) {
+		if (security_binder_transaction(proc->tsk,
+						target_proc->tsk) < 0) {
 			return_error = BR_FAILED_REPLY;
 			return_error_param = -EPERM;
 			return_error_line = __LINE__;
@@ -3511,7 +3511,7 @@ retry_lowmem:
 
 	t->buffer = binder_alloc_new_buf(&target_proc->alloc, tr->data_size,
 		tr->offsets_size, extra_buffers_size,
-		!reply && (t->flags & TF_ONE_WAY));
+		!reply && (t->flags & TF_ONE_WAY), current->tgid);
 	if (IS_ERR(t->buffer)) {
 		/*
 		 * -ESRCH indicates VMA cleared. The target is dying.
@@ -3978,17 +3978,10 @@ static int binder_thread_write(struct binder_proc *proc,
 				struct binder_node *ctx_mgr_node;
 				mutex_lock(&context->context_mgr_node_lock);
 				ctx_mgr_node = context->binder_context_mgr_node;
-				if (ctx_mgr_node) {
-					if (ctx_mgr_node->proc == proc) {
-						binder_user_error("%d:%d context manager tried to acquire desc 0\n",
-								  proc->pid, thread->pid);
-						mutex_unlock(&context->context_mgr_node_lock);
-						return -EINVAL;
-					}
+				if (ctx_mgr_node)
 					ret = binder_inc_ref_for_node(
 							proc, ctx_mgr_node,
 							strong, NULL, &rdata);
-				}
 				mutex_unlock(&context->context_mgr_node_lock);
 			}
 			if (ret)

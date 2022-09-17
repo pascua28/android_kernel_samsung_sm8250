@@ -140,7 +140,6 @@ static enum blk_eh_timer_return mmc_mq_timed_out(struct request *req,
 	bool ignore_tout;
 
 	spin_lock_irqsave(q->queue_lock, flags);
-
 	ignore_tout = mq->recovery_needed || !mq->use_cqe;
 	spin_unlock_irqrestore(q->queue_lock, flags);
 

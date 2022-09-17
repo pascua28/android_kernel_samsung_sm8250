@@ -1498,6 +1498,9 @@ struct task_struct {
 	int drawing_flag;
 	int drawing_mig_boost;
 #endif
+	/* task is frozen/stopped (used by the cgroup freezer) */
+	ANDROID_KABI_USE(1, unsigned frozen:1);
+
 	/*
 	 * New fields for task_struct should be added above here, so that
 	 * they are included in the randomized portion of task_struct.
