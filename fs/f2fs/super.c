@@ -2443,7 +2443,6 @@ static int f2fs_set_context(struct inode *inode, const void *ctx, size_t len,
 				ctx, len, fs_data, XATTR_CREATE);
 }
 
-<<<<<<< HEAD
 #if defined(CONFIG_DDAR) || defined(CONFIG_FSCRYPT_SDP)
 static int f2fs_get_knox_context(struct inode *inode, const char *name, void *val, size_t len)
 {
@@ -2458,11 +2457,7 @@ static int f2fs_set_knox_context(struct inode *inode, const char *name, const vo
 }
 #endif
 
-static const union fscrypt_context *
-f2fs_get_dummy_context(struct super_block *sb)
-=======
 static bool f2fs_dummy_context(struct inode *inode)
->>>>>>> parent of 0764ced2f05b (Merge remote-tracking branch 'aosp/upstream-f2fs-stable-linux-4.19.y' into android-4.19-stable)
 {
 	return DUMMY_ENCRYPTION_ENABLED(F2FS_I_SB(inode));
 }
@@ -2507,15 +2502,11 @@ static const struct fscrypt_operations f2fs_cryptops = {
 	.key_prefix		= "f2fs:",
 	.get_context		= f2fs_get_context,
 	.set_context		= f2fs_set_context,
-<<<<<<< HEAD
 #if defined(CONFIG_DDAR) || defined(CONFIG_FSCRYPT_SDP)
 	.get_knox_context = f2fs_get_knox_context,
 	.set_knox_context = f2fs_set_knox_context,
 #endif
-	.get_dummy_context	= f2fs_get_dummy_context,
-=======
 	.dummy_context		= f2fs_dummy_context,
->>>>>>> parent of 0764ced2f05b (Merge remote-tracking branch 'aosp/upstream-f2fs-stable-linux-4.19.y' into android-4.19-stable)
 	.empty_dir		= f2fs_empty_dir,
 	.max_namelen		= F2FS_NAME_LEN,
 	.has_stable_inodes	= f2fs_has_stable_inodes,

@@ -6377,9 +6377,8 @@ stune_util(int cpu, unsigned long other_util,
 	long margin = schedtune_cpu_margin_with(util, cpu, NULL);
 
 	trace_sched_boost_cpu(cpu, util, margin);
-	boosted_util = util + margin;
 
-	return boosted_util;
+	return util + margin;
 }
 
 #else /* CONFIG_SCHED_TUNE */
