@@ -37,7 +37,6 @@ static struct cqhci_host_crypto_variant_ops cqhci_crypto_qti_variant_ops = {
 };
 
 static atomic_t keycache;
-static bool cmdq_use_default_du_size;
 
 static bool ice_cap_idx_valid(struct cqhci_host *host,
 					unsigned int cap_idx)
@@ -47,19 +46,12 @@ static bool ice_cap_idx_valid(struct cqhci_host *host,
 
 static uint8_t get_data_unit_size_mask(unsigned int data_unit_size)
 {
-	unsigned int du_size;
-
 	if (data_unit_size < MINIMUM_DUN_SIZE ||
 		data_unit_size > MAXIMUM_DUN_SIZE ||
 	    !is_power_of_2(data_unit_size))
 		return 0;
 
-	if (cmdq_use_default_du_size)
-		du_size = MINIMUM_DUN_SIZE;
-	else
-		du_size =  data_unit_size;
-
-	return du_size / MINIMUM_DUN_SIZE;
+	return data_unit_size / MINIMUM_DUN_SIZE;
 }
 
 
@@ -328,9 +320,7 @@ int cqhci_crypto_qti_prep_desc(struct cqhci_host *host, struct mmc_request *mrq,
 
 	if (!cqhci_keyslot_valid(host, bc->bc_keyslot))
 		return -EINVAL;
-	if (!(atomic_read(&keycache) & (1 << bc->bc_keyslot))) {
-		if (bc->is_ext4)
-			cmdq_use_default_du_size = true;
+	if (!(atomic_read(&keycache) & (1 << bc->bc_keyslot)))  {
 		ret = cqhci_crypto_qti_keyslot_program(host->ksm, bc->bc_key,
 						       bc->bc_keyslot);
 		if (ret) {
@@ -342,13 +332,9 @@ int cqhci_crypto_qti_prep_desc(struct cqhci_host *host, struct mmc_request *mrq,
 	}
 
 	if (ice_ctx) {
-		if (bc->is_ext4)
-			*ice_ctx = DATA_UNIT_NUM(req->__sector);
-		else
-			*ice_ctx = DATA_UNIT_NUM(bc->bc_dun[0]);
-
-		*ice_ctx = *ice_ctx | CRYPTO_CONFIG_INDEX(bc->bc_keyslot) |
-			    CRYPTO_ENABLE(true);
+		*ice_ctx = DATA_UNIT_NUM(bc->bc_dun[0]) |
+			   CRYPTO_CONFIG_INDEX(bc->bc_keyslot) |
+			   CRYPTO_ENABLE(true);
 	}
 	return 0;
 }
