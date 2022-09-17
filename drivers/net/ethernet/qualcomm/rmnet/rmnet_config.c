@@ -392,26 +392,11 @@ static int rmnet_changelink(struct net_device *dev, struct nlattr *tb[],
 		if (!ep)
 			return -ENODEV;
 
-		if (mux_id != priv->mux_id) {
-			struct rmnet_endpoint *ep;
+		hlist_del_init_rcu(&ep->hlnode);
+		hlist_add_head_rcu(&ep->hlnode, &port->muxed_ep[mux_id]);
 
-			ep = rmnet_get_endpoint(port, priv->mux_id);
-			if (!ep)
-				return -ENODEV;
-
-			if (rmnet_get_endpoint(port, mux_id)) {
-				NL_SET_ERR_MSG_MOD(extack,
-						   "MUX ID already exists");
-				return -EINVAL;
-			}
-
-			hlist_del_init_rcu(&ep->hlnode);
-			hlist_add_head_rcu(&ep->hlnode,
-					   &port->muxed_ep[mux_id]);
-
-			ep->mux_id = mux_id;
-			priv->mux_id = mux_id;
-		}
+		ep->mux_id = mux_id;
+		priv->mux_id = mux_id;
 	}
 
 	if (data[IFLA_RMNET_FLAGS]) {

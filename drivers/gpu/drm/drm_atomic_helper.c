@@ -2837,6 +2837,7 @@ int __drm_atomic_helper_disable_plane(struct drm_plane *plane,
 
 	return 0;
 }
+EXPORT_SYMBOL_GPL(__drm_atomic_helper_disable_plane);
 
 static int update_output_state(struct drm_atomic_state *state,
 			       struct drm_mode_set *set)
@@ -3022,6 +3023,7 @@ commit:
 
 	return 0;
 }
+EXPORT_SYMBOL_GPL(__drm_atomic_helper_set_config);
 
 static int __drm_atomic_helper_disable_all(struct drm_device *dev,
 					   struct drm_modeset_acquire_ctx *ctx,

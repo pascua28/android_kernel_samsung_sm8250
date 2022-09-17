@@ -284,7 +284,7 @@ enum drm_panel_orientation {
 #define DRM_MODE_DP_COLORIMETRY_BT601_YCC		13
 #define DRM_MODE_DP_COLORIMETRY_BT709_YCC		14
 #define DRM_MODE_DP_COLORIMETRY_SRGB			15
-#define DRM_MODE_DP_COLORIMETRY_RGB_WIDE_GAMUT	16
+#define DRM_MODE_DP_COLORIMETRY_RGB_WIDE_GAMUT		16
 #define DRM_MODE_DP_COLORIMETRY_SCRGB			17
 
 /**
@@ -1220,6 +1220,7 @@ struct drm_connector {
 	 * &drm_mode_config.connector_free_work.
 	 */
 	struct llist_node free_node;
+
 	/**
 	 * @panel:
 	 *
