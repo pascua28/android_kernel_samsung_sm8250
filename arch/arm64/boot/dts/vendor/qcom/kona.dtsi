@@ -347,7 +347,7 @@
 	};
 
 	chosen {
-		bootargs = "noirqdebug rcu_nocbs=0-3 cgroup.memory=nokmem nosoftlockup mce=ignore_ce";
+		bootargs = "noirqdebug rcu_nocbs=0-3 cgroup.memory=nokmem nodebugmon nosoftlockup mce=ignore_ce";
 	};
 
 	firmware: firmware {
