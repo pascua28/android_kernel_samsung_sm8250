@@ -317,7 +317,9 @@ static int __init cpuinfo_regs_init(void)
 }
 static void cpuinfo_detect_icache_policy(struct cpuinfo_arm64 *info)
 {
+#ifdef CONFIG_DEBUG_KERNEL
 	unsigned int cpu = smp_processor_id();
+#endif
 	u32 l1ip = CTR_L1IP(info->reg_ctr);
 
 	switch (l1ip) {
