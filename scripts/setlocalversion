@@ -57,15 +57,10 @@ scm_version()
 				echo "+"
 				return
 			fi
-			# If we are past a tagged commit (like
-			# "v2.6.30-rc5-302-g72357d5"), we pretty print it.
-			if atag="`git describe 2>/dev/null`"; then
-				echo "$atag" | awk -F- '{printf("-%05d-%s", $(NF-1),$(NF))}'
-
-			# If we don't have a tag at all we print -g{commitish}.
-			else
-				printf '%s%s' -g $head
-			fi
+			# We print -g{commitish},
+			# using exactly 12 hex chars.
+			head="$(echo $head | cut -c1-12)"
+			printf '%s%s' -g $head
 		fi
 
 		# Is this git on svn?
