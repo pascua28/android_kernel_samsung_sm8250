@@ -22,6 +22,7 @@ CONFIG_NFC_FEATURE_SN100U=y
 make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 \
 	CLANG_DIR="/home/pascua14/llvm-12/bin/" \
 	LLVM=1 \
+	LLVM_IAS=1 \
 	oldconfig
 
 cp out/.config arch/arm64/configs/r8q_defconfig
