@@ -100,6 +100,12 @@ lto_lds()
 modpost_link()
 {
 	local objects
+	local strip_debug
+	
+	# The kallsyms linking does not need debug symbols included.
+	if [ "$output" != "${output#.tmp_vmlinux.kallsyms}" ] ; then
+		strip_debug=-Wl,--strip-debug
+	fi
 
 	objects="--whole-archive				\
 		built-in.a					\
@@ -166,6 +172,7 @@ vmlinux_link()
 			${1}"
 
 		${CC} ${CFLAGS_vmlinux} -o ${2}			\
+			${strip_debug}					\
 			-Wl,-T,${lds}				\
 			${objects}				\
 			-lutil -lrt -lpthread
@@ -241,7 +248,6 @@ sortextable()
 cleanup()
 {
 	rm -f .tmp_System.map
-	rm -f .tmp_kallsyms*
 	rm -f .tmp_lto.lds
 	rm -f .tmp_vmlinux*
 	rm -f built-in.a
@@ -266,8 +272,6 @@ on_signals()
 }
 trap on_signals HUP INT QUIT TERM
 
-#
-#
 # Use "make V=1" to debug this script
 case "${KBUILD_VERBOSE}" in
 *1*)
