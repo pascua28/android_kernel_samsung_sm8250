@@ -35,6 +35,8 @@ CONFIG_THINLTO=y
 CONFIG_LTO_CLANG=y
 # CONFIG_CFI_CLANG is not set" >> out/.config
 
+CLANG_VERSION=12
+
 elif [ $variant == "2" ]; then
 
 scripts/configcleaner "CONFIG_THINLTO"
@@ -46,19 +48,23 @@ CONFIG_LTO=y
 CONFIG_LTO_CLANG=y
 # CONFIG_CFI_CLANG is not set" >> out/.config
 
+CLANG_VERSION=12
+
 elif [ $variant == "3" ]; then
 
 echo "
 CONFIG_LTO_NONE=y
 # CONFIG_LTO_CLANG is not set" >> out/.config
 
+CLANG_VERSION=14
+
 fi
 
 make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 CROSS_COMPILE=$BUILD_CROSS_COMPILE LLVM=1 LLVM_IAS=1 \
-	CLANG_DIR="/home/pascua14/llvm-12/bin/" CLANG_TRIPLE=$CLANG_TRIPLE oldconfig
+	CLANG_DIR="/home/pascua14/llvm-$CLANG_VERSION/bin/" CLANG_TRIPLE=$CLANG_TRIPLE oldconfig
 
 make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 CROSS_COMPILE=$BUILD_CROSS_COMPILE LLVM=1 LLVM_IAS=1 \
-	CLANG_DIR="/home/pascua14/llvm-12/bin/" CLANG_TRIPLE=$CLANG_TRIPLE
+	CLANG_DIR="/home/pascua14/llvm-$CLANG_VERSION/bin/" CLANG_TRIPLE=$CLANG_TRIPLE
 
 IMAGE="out/arch/arm64/boot/Image.gz-dtb"
 
