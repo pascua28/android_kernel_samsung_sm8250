@@ -73,5 +73,5 @@ if [[ -f "$IMAGE" ]]; then
 	rm AnyKernel3/*.zip > /dev/null 2>&1
 	cp $IMAGE AnyKernel3/zImage
 	cd AnyKernel3
-	zip -r9 Kernel-r8q.zip .
+	zip -r9 Kernel-G780G-G781B.zip .
 fi
