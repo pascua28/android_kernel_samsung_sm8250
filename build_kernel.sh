@@ -4,51 +4,67 @@ export ARCH=arm64
 mkdir out
 
 BUILD_CROSS_COMPILE=/home/pascua14/gcc7/bin/aarch64-linux-gnu-
-KERNEL_LLVM_BIN=/home/pascua14/llvm-12/bin/clang
 CLANG_TRIPLE=aarch64-linux-gnu-
 KERNEL_MAKE_ENV="DTC_EXT=$(pwd)/tools/dtc CONFIG_BUILD_ARM64_DT_OVERLAY=y"
 
 echo "**********************************"
 echo "Select variant (Snapdragon only)"
-echo "(1) 4G Variant"
-echo "(2) 5G Variant"
+echo "(1) ThinLTO build"
+echo "(2) Full LTO build"
+echo "(3) Non-LTO build"
 read -p "Selected variant: " variant
 
-make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 CROSS_COMPILE=$BUILD_CROSS_COMPILE CC=$KERNEL_LLVM_BIN CLANG_TRIPLE=$CLANG_TRIPLE r8q_defconfig
+make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 CROSS_COMPILE=$BUILD_CROSS_COMPILE \
+	CLANG_DIR="/home/pascua14/llvm-12/bin/" LLVM=1 LLVM_IAS=1 CLANG_TRIPLE=$CLANG_TRIPLE r8q_defconfig
+
+scripts/configcleaner "
+CONFIG_LTO
+CONFIG_THINLTO
+CONFIG_LTO_NONE
+CONFIG_LTO_CLANG
+CONFIG_CFI_CLANG"
 
 if [ $variant == "1" ]; then
-	echo "
-Compiling for 4G variant
-"
-	MODEL="G780G"
+
+scripts/configcleaner "CONFIG_THINLTO"
+
+echo "
+CONFIG_LTO=y
+CONFIG_THINLTO=y
+# CONFIG_LTO_NONE is not set
+CONFIG_LTO_CLANG=y
+# CONFIG_CFI_CLANG is not set" >> out/.config
+
+CLANG_VERSION=12
 
 elif [ $variant == "2" ]; then
-	echo "
-Compiling for 5G variant
-"
-	MODEL="G781B"
 
-	scripts/configcleaner "
-CONFIG_SAMSUNG_NFC
-CONFIG_NFC_PN547
-CONFIG_NFC_PN547_ESE_SUPPORT
-CONFIG_NFC_FEATURE_SN100U
-CONFIG_FIVE
-"
+scripts/configcleaner "CONFIG_THINLTO"
 
-	echo "
-# CONFIG_SAMSUNG_NFC is not set
-# CONFIG_NFC_PN547 is not set
-# CONFIG_NFC_PN547_ESE_SUPPORT is not set
-# CONFIG_NFC_FEATURE_SN100U is not set
-# CONFIG_FIVE is not set
-" >> out/.config
+echo "
+CONFIG_LTO=y
+# CONFIG_THINLTO is not set
+# CONFIG_LTO_NONE is not set
+CONFIG_LTO_CLANG=y
+# CONFIG_CFI_CLANG is not set" >> out/.config
 
-make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 CROSS_COMPILE=$BUILD_CROSS_COMPILE CC=$KERNEL_LLVM_BIN CLANG_TRIPLE=$CLANG_TRIPLE oldconfig
+CLANG_VERSION=12
+
+elif [ $variant == "3" ]; then
+
+echo "
+CONFIG_LTO_NONE=y
+# CONFIG_LTO_CLANG is not set" >> out/.config
+
+CLANG_VERSION=14
 
 fi
 
-make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 CROSS_COMPILE=$BUILD_CROSS_COMPILE CC=$KERNEL_LLVM_BIN CLANG_TRIPLE=$CLANG_TRIPLE
+make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 CROSS_COMPILE=$BUILD_CROSS_COMPILE LLVM=1 LLVM_IAS=1 \
+	CLANG_DIR="/home/pascua14/llvm-$CLANG_VERSION/bin/" CLANG_TRIPLE=$CLANG_TRIPLE oldconfig
+
+make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 CROSS_COMPILE=$BUILD_CROSS_COMPILE LLVM=1 LLVM_IAS=1 \
+	CLANG_DIR="/home/pascua14/llvm-$CLANG_VERSION/bin/" CLANG_TRIPLE=$CLANG_TRIPLE
 
 IMAGE="out/arch/arm64/boot/Image.gz-dtb"
 
@@ -57,5 +73,5 @@ if [[ -f "$IMAGE" ]]; then
 	rm AnyKernel3/*.zip > /dev/null 2>&1
 	cp $IMAGE AnyKernel3/zImage
 	cd AnyKernel3
-	zip -r9 Kernel-$MODEL.zip .
+	zip -r9 Kernel-G780G-G781B.zip .
 fi
