@@ -206,6 +206,9 @@ static ssize_t isolate_store(struct device *dev,
 	int cpuid = cpu->dev.id;
 	int err, isolate;
 
+	if (cpuid == 0)
+		return count;
+
 	err = kstrtoint(strstrip((char *)buf), 0, &isolate);
 	if (err)
 		return err;
