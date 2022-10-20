@@ -21,40 +21,6 @@ int msm_dma_map_sg_attrs(struct device *dev, struct scatterlist *sg, int nents,
 		   enum dma_data_direction dir, struct dma_buf *dma_buf,
 		   unsigned long attrs);
 
-void msm_dma_debug_count_buffers(struct device *dev);
-/*
- * This function takes an extra reference to the dma_buf.
- * What this means is that calling msm_dma_unmap_sg will not result in buffer's
- * iommu mapping being removed, which means that subsequent calls to lazy map
- * will simply re-use the existing iommu mapping.
- * The iommu unmapping of the buffer will occur when the ION buffer is
- * destroyed.
- * Using lazy mapping can provide a performance benefit because subsequent
- * mappings are faster.
- *
- * The limitation of using this API are that all subsequent iommu mappings
- * must be the same as the original mapping, ie they must map the same part of
- * the buffer with the same dma data direction. Also there can't be multiple
- * mappings of different parts of the buffer.
- */
-static inline int msm_dma_map_sg_lazy(struct device *dev,
-			       struct scatterlist *sg, int nents,
-			       enum dma_data_direction dir,
-			       struct dma_buf *dma_buf)
-{
-	return msm_dma_map_sg_attrs(dev, sg, nents, dir, dma_buf, 0);
-}
-
-static inline int msm_dma_map_sg(struct device *dev, struct scatterlist *sg,
-				  int nents, enum dma_data_direction dir,
-				  struct dma_buf *dma_buf)
-{
-	unsigned long attrs;
-
-	attrs = DMA_ATTR_NO_DELAYED_UNMAP;
-	return msm_dma_map_sg_attrs(dev, sg, nents, dir, dma_buf, attrs);
-}
-
 void msm_dma_unmap_sg_attrs(struct device *dev, struct scatterlist *sgl,
 			    int nents, enum dma_data_direction dir,
 			    struct dma_buf *dma_buf, unsigned long attrs);
