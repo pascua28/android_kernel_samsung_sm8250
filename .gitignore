@@ -141,4 +141,5 @@ out/
 *.gz
 *.pyc
 *.out
+dtb
 zImage

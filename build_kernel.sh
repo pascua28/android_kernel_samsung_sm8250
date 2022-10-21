@@ -66,12 +66,15 @@ make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 CROSS_COMPILE=$BUILD
 make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 CROSS_COMPILE=$BUILD_CROSS_COMPILE LLVM=1 LLVM_IAS=1 \
 	CLANG_DIR="/home/pascua14/llvm-$CLANG_VERSION/bin/" CLANG_TRIPLE=$CLANG_TRIPLE
 
-IMAGE="out/arch/arm64/boot/Image.gz-dtb"
+IMAGE="out/arch/arm64/boot/Image.gz"
+DTB_OUT="out/arch/arm64/boot/dts/vendor/qcom"
+
+cat $DTB_OUT/kona.dtb $DTB_OUT/kona-v2.dtb $DTB_OUT/kona-v2.1.dtb > AnyKernel3/dtb
 
 if [[ -f "$IMAGE" ]]; then
-	rm AnyKernel3/zImage > /dev/null 2>&1
+	rm AnyKernel3/Image.gz > /dev/null 2>&1
 	rm AnyKernel3/*.zip > /dev/null 2>&1
-	cp $IMAGE AnyKernel3/zImage
+	cp $IMAGE AnyKernel3/Image.gz
 	cd AnyKernel3
 	zip -r9 Kernel-G780G-G781B.zip .
 fi
