@@ -56,7 +56,7 @@ echo "
 CONFIG_LTO_NONE=y
 # CONFIG_LTO_CLANG is not set" >> out/.config
 
-CLANG_VERSION=14
+CLANG_VERSION=16
 
 fi
 
