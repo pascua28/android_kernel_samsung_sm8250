@@ -19,8 +19,11 @@ CONFIG_NFC_PN547_ESE_SUPPORT=y
 CONFIG_NFC_FEATURE_SN100U=y
 " >> out/.config
 
+CLANG_VERSION=16
+LLVM_BIN=/home/pascua14/llvm-$CLANG_VERSION/bin/
+
 make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 \
-	CLANG_DIR="/home/pascua14/llvm-12/bin/" \
+	CLANG_DIR=$LLVM_BIN \
 	LLVM=1 \
 	LLVM_IAS=1 \
 	oldconfig
