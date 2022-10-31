@@ -4213,10 +4213,12 @@ static inline void adjust_cpus_for_packing(struct task_struct *p,
 	if (prefer_spread_on_idle(*best_idle_cpu))
 		fbt_env->need_idle |= 2;
 
+#ifdef CONFIG_SCHED_WALT
 	if (task_rtg_high_prio(p) && walt_nr_rtg_high_prio(*target_cpu) > 0) {
 		*target_cpu = -1;
 		return;
 	}
+#endif
 
 	if (fbt_env->need_idle || task_placement_boost_enabled(p) || boosted ||
 		shallowest_idle_cstate <= 0) {
@@ -4347,6 +4349,10 @@ place_entity(struct cfs_rq *cfs_rq, struct sched_entity *se, int initial)
 				return;
 			}
 		}
+#else
+		if (entity_is_task(se) && per_task_boost(task_of(se)) ==
+				TASK_BOOST_STRICT_MAX)
+			vruntime -= sysctl_sched_latency;
 #endif
 	}
 
