@@ -7313,9 +7313,11 @@ static int get_start_cpu(struct task_struct *p, bool sync_boost)
 	if (task_skip_min || boosted) {
 		start_cpu = rd->mid_cap_orig_cpu == -1 ?
 			rd->max_cap_orig_cpu : rd->mid_cap_orig_cpu;
-#ifdef CONFIG_WALT_POWER_FEATURE
+	}
+
+	if (task_boost > TASK_BOOST_ON_MID) {
+		start_cpu = rd->max_cap_orig_cpu;
 		return start_cpu;
-#endif
 	}
 
 	if (sync_boost && rd->mid_cap_orig_cpu != -1)
@@ -7329,6 +7331,10 @@ static int get_start_cpu(struct task_struct *p, bool sync_boost)
 		start_cpu = rd->mid_cap_orig_cpu == -1 ?
 			rd->max_cap_orig_cpu : rd->mid_cap_orig_cpu;
 	}
+
+	if (start_cpu == rd->mid_cap_orig_cpu &&
+			 !task_demand_fits(p, start_cpu))
+		start_cpu = rd->max_cap_orig_cpu;
 
 	return start_cpu;
 }
@@ -7504,19 +7510,11 @@ static void find_best_target(struct sched_domain *sd, cpumask_t *cpus,
 				prioritized_task && !is_min_capacity_cpu(i) &&
 				per_cpu(prioritized_task_nr, i) == 0;
 
-			if (!(prefer_idle && idle_cpu(i)) &&
+			if ((!(prefer_idle && idle_cpu(i)) &&
 			    !best_prioritized_candidate &&
-			    new_util > capacity_orig)
-				continue;
-
-			/*
-			 * If start cpu is mid core, we don't want to loop
-			 * back to little cores, unless the task prefers
-			 * idle cpu and could not find one in mid/max core.
-			 */
-			if (!(prefer_idle && idle_fit_cpu_found == false) &&
-			    is_min_capacity_cpu(i) &&
-			    !task_fits_capacity(p, capacity_orig, i))
+			    new_util > capacity_orig) ||
+			   (is_min_capacity_cpu(i) &&
+			    !task_fits_capacity(p, capacity_orig, i)))
 				continue;
 
 			/*
@@ -7824,6 +7822,11 @@ static void find_best_target(struct sched_domain *sd, cpumask_t *cpus,
 
 	} while (sg = sg->next, sg != start_sd->groups);
 
+	if (prefer_idle && (best_idle_cpu != -1)) {
+		target_cpu = best_idle_cpu;
+		goto target;
+	}
+
 	if (prioritized_task && (best_prioritized_cpu != -1)) {
 		target_cpu = best_prioritized_cpu;
 		goto target;
@@ -7862,11 +7865,6 @@ static void find_best_target(struct sched_domain *sd, cpumask_t *cpus,
 		if (curr_tsk && uclamp_boosted(curr_tsk))
 #endif
 			target_cpu = best_idle_cpu;
-	}
-
-	if (prefer_idle && (best_idle_cpu != -1)) {
-		target_cpu = best_idle_cpu;
-		goto target;
 	}
 
 	if (target_cpu == -1)
@@ -11313,15 +11311,9 @@ static int load_balance(int this_cpu, struct rq *this_rq,
 		.loop		= 0,
 	};
 
-#ifdef CONFIG_SCHED_WALT
-	env.prefer_spread = (idle != CPU_NOT_IDLE &&
-				prefer_spread_on_idle(this_cpu,
-				idle == CPU_NEWLY_IDLE) &&
+	env.prefer_spread = (prefer_spread_on_idle(this_cpu) &&
 				!((sd->flags & SD_ASYM_CPUCAPACITY) &&
 				 !is_asym_cap_cpu(this_cpu)));
-#else
-	env.prefer_spread = false;
-#endif
 
 	cpumask_and(cpus, sched_domain_span(sd), cpu_active_mask);
 
