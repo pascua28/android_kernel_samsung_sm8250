@@ -10369,19 +10369,10 @@ static bool update_sd_pick_busiest(struct lb_env *env,
 	if (sgs->group_type < busiest->group_type)
 		return false;
 
-	/*
-	 * This sg and busiest are classified as same. when prefer_spread
-	 * is true, we want to maximize the chance of pulling taks, so
-	 * prefer to pick sg with more runnable tasks and break the ties
-	 * with utilization.
-	 */
-	if (env->prefer_spread) {
-		if (sgs->sum_nr_running < busiest->sum_nr_running)
-			return false;
-		if (sgs->sum_nr_running > busiest->sum_nr_running)
-			return true;
-		return sgs->group_util > busiest->group_util;
-	}
+	if (env->prefer_spread && env->idle != CPU_NOT_IDLE &&
+		(sgs->sum_nr_running > busiest->sum_nr_running) &&
+		(sgs->group_util > busiest->group_util))
+		return true;
 
 	if (sgs->avg_load <= busiest->avg_load)
 		return false;
