@@ -479,8 +479,7 @@ skip_betting:
 	return cpufreq_driver_resolve_freq(policy, freq);
 }
 
-extern long
-schedtune_cpu_margin_with(unsigned long util, int cpu, struct task_struct *p);
+extern schedtune_cpu_margin(unsigned long util, int cpu);
 
 /*
  * This function computes an effective utilization for the given CPU, to be
@@ -542,7 +541,7 @@ unsigned long schedutil_cpu_util(int cpu, unsigned long util_cfs,
 	util = util_cfs + cpu_util_rt(rq);
 	if (type == FREQUENCY_UTIL)
 #ifdef CONFIG_SCHED_TUNE
-		util += schedtune_cpu_margin_with(util, cpu, p);
+		util += schedtune_cpu_margin(util, cpu);
 #else
 		util = uclamp_rq_util_with(rq, util, p);
 #endif
@@ -614,11 +613,11 @@ static unsigned long sugov_get_util(struct sugov_cpu *sg_cpu)
 	struct rq *rq = cpu_rq(sg_cpu->cpu);
 
 #ifdef CONFIG_SCHED_TUNE
-	unsigned long util = stune_util(sg_cpu->cpu, cpu_util_rt(rq), NULL);
-#else
-	unsigned long util = cpu_util_freq(sg_cpu->cpu, NULL);
-#endif
 	unsigned long util_cfs = cpu_util_cfs(rq);
+#else
+	unsigned long util_cfs = cpu_util_freq(sg_cpu->cpu, NULL)
+				- cpu_util_rt(rq);
+#endif
 	unsigned long max = arch_scale_cpu_capacity(NULL, sg_cpu->cpu);
 
 	sg_cpu->max = max;
