@@ -6457,15 +6457,15 @@ schedtune_margin(unsigned long signal, long boost, long capacity)
 	return margin;
 }
 
-static inline int
+inline int
 schedtune_cpu_margin(unsigned long util, int cpu)
 {
-	if (boost == 0)
-		margin = 0;
-	else
-		margin = schedtune_margin(util, boost, capacity_orig_of(cpu));
+	int boost = schedtune_cpu_boost(cpu);
 
-	return margin;
+	if (boost == 0)
+		return 0;
+
+	return schedtune_margin(util, boost, capacity_orig_of(cpu));
 }
 
 long schedtune_task_margin(struct task_struct *task)
@@ -6490,6 +6490,7 @@ stune_util(int cpu, unsigned long other_util,
 	unsigned long util = min_t(unsigned long, SCHED_CAPACITY_SCALE,
 				   cpu_util_freq(cpu, walt_load) + other_util);
 	long margin = schedtune_cpu_margin(util, cpu);
+
 	unsigned long boosted_util;
 #ifdef CONFIG_PERF_MGR
 	unsigned long fps_util = per_cpu(fps_boosted_util, cpu);
@@ -6505,7 +6506,7 @@ stune_util(int cpu, unsigned long other_util,
 
 #else /* CONFIG_SCHED_TUNE */
 
-static inline int
+inline int
 schedtune_cpu_margin(unsigned long util, int cpu)
 {
 	return 0;
@@ -6513,6 +6514,7 @@ schedtune_cpu_margin(unsigned long util, int cpu)
 
 #endif /* CONFIG_SCHED_TUNE */
 
+#ifdef CONFIG_SCHED_TUNE
 static inline unsigned long
 boosted_task_util(struct task_struct *task)
 {
@@ -6536,6 +6538,7 @@ boosted_task_util(struct task_struct *task)
 
 	return ret_value;
 }
+#endif
 
 static unsigned long cpu_util_without(int cpu, struct task_struct *p);
 
@@ -7294,11 +7297,6 @@ static int get_start_cpu(struct task_struct *p, bool sync_boost)
 		return start_cpu;
 	}
 #endif /* CONFIG_SCHED_SEC_TASK_BOOST */
-
-	if (task_boost > TASK_BOOST_ON_MID) {
-		start_cpu = rd->max_cap_orig_cpu;
-		return start_cpu;
-	}
 
 	/*
 	 * note about min/mid/max_cap_orig_cpu - either all of them will be -ve
