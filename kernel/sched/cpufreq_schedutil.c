@@ -678,7 +678,6 @@ static void sugov_update_single(struct update_util_data *hook, u64 time,
 		sg_policy->rtg_boost_util = boost_util;
 	}
 
-	util = sugov_iowait_apply(sg_cpu, time, util, max);
 	sugov_calc_avg_cap(sg_policy, sg_cpu->walt_load.ws,
 			   sg_policy->policy->cur);
 
