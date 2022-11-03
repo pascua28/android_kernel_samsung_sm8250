@@ -280,8 +280,6 @@ static int kgsl_add_event_common(struct kgsl_device *device,
 
 	INIT_WORK(&event->work, _kgsl_event_worker);
 
-	trace_kgsl_register_event(KGSL_CONTEXT_ID(context), timestamp, func);
-
 	spin_lock(&group->lock);
 
 	/*
