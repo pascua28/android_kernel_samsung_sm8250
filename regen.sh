@@ -24,7 +24,6 @@ LLVM_BIN=/home/pascua14/llvm-$CLANG_VERSION/bin/
 
 make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 \
 	CLANG_DIR=$LLVM_BIN \
-	LLVM=1 \
 	LLVM_IAS=1 \
 	oldconfig
 
