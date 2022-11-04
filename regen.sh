@@ -21,10 +21,10 @@ CONFIG_NFC_FEATURE_SN100U=y
 
 CLANG_VERSION=12
 LLVM_BIN=/home/pascua14/llvm-$CLANG_VERSION/bin/
+CLANG_CC=$LLVM_BIN/clang
 
 make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 \
-	CLANG_DIR=$LLVM_BIN \
-	LLVM_IAS=1 \
+	CC=$CLANG_CC \
 	oldconfig
 
 cp out/.config arch/arm64/configs/r8q_defconfig
