@@ -284,11 +284,16 @@ done:
 static u64 qcom_cpufreq_get_cpu_cycle_counter(int cpu)
 {
 	struct cpufreq_counter *cpu_counter;
+	struct cpufreq_policy *policy;
 	struct cpufreq_qcom *cpu_domain;
 	u64 cycle_counter_ret;
 	unsigned long flags;
 	u16 offset;
 	u32 val;
+
+	policy = cpufreq_cpu_get_raw(cpu);
+	if (!policy)
+		return 0;
 
 	cpu_domain = qcom_freq_domain_map[cpu];
 	cpu_counter = &qcom_cpufreq_counter[cpu];
