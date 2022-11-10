@@ -302,7 +302,7 @@ static irqreturn_t fts_filter_interrupt(struct fts_ts_info *info)
 }
 #endif
 
-int fts_write_reg(struct fts_ts_info *info,
+static inline int fts_write_reg(struct fts_ts_info *info,
 		u8 *reg, u16 num_com)
 {
 	struct i2c_msg xfer_msg[2];
@@ -388,7 +388,7 @@ exit:
 	return 0;
 }
 
-int fts_read_reg(struct fts_ts_info *info, u8 *reg, int cnum,
+static inline int fts_read_reg(struct fts_ts_info *info, u8 *reg, int cnum,
 		u8 *buf, int num)
 {
 	struct i2c_msg xfer_msg[2];
@@ -705,7 +705,7 @@ void fts_delay(unsigned int ms)
 		msleep(ms);
 }
 
-void fts_command(struct fts_ts_info *info, u8 cmd, bool checkEcho)
+static inline void fts_command(struct fts_ts_info *info, u8 cmd, bool checkEcho)
 {
 	u8 regAdd = 0;
 	int ret = 0;
