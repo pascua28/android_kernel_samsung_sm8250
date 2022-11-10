@@ -3357,7 +3357,6 @@ else
 endif
 
 ccflags-y += $(call cc-option, -Os)
-ccflags-y += $(call cc-option, -foptimize-sibling-calls)
 
 # inject some build related information
 ifeq ($(CONFIG_BUILD_TAG), y)
