@@ -39,3 +39,5 @@ obj-y += proximity/
 obj-y += resolver/
 obj-y += temperature/
 obj-y += trigger/
+
+subdir-ccflags-y += -Os
