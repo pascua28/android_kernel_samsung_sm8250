@@ -1166,6 +1166,9 @@ static int __ref try_core_ctl(void *data)
 	struct cluster_data *cluster = data;
 	unsigned long flags;
 
+	if (&cluster->min_cpus == &cluster->num_cpus)
+		return 0;
+
 	while (1) {
 		set_current_state(TASK_INTERRUPTIBLE);
 		spin_lock_irqsave(&cluster->pending_lock, flags);
