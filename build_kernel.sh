@@ -16,21 +16,27 @@ DATE_START=$(date +"%s")
 
 make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 CROSS_COMPILE=$BUILD_CROSS_COMPILE
 
-DATE_END=$(date +"%s")
-DIFF=$(($DATE_END - $DATE_START))
-
 IMAGE="out/arch/arm64/boot/Image.gz"
 DTB_OUT="out/arch/arm64/boot/dts/vendor/qcom"
 
-cat $DTB_OUT/kona.dtb $DTB_OUT/kona-v2.dtb $DTB_OUT/kona-v2.1.dtb > AnyKernel3/dtb
+cat $DTB_OUT/kona.dtb $DTB_OUT/kona-v2.dtb $DTB_OUT/kona-v2.1.dtb > AnyKernel3/kona.dtb
+
+patch -p1 --merge < patches/freqtable.diff
+
+make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 CROSS_COMPILE=$BUILD_CROSS_COMPILE dtbs
+
+cat $DTB_OUT/kona.dtb $DTB_OUT/kona-v2.dtb $DTB_OUT/kona-v2.1.dtb > AnyKernel3/kona-perf.dtb
+
+patch -p1 -R --merge < patches/freqtable.diff
+
+DATE_END=$(date +"%s")
+DIFF=$(($DATE_END - $DATE_START))
+
+echo "Time wasted: $(($DIFF / 60)) minute(s) and $(($DIFF % 60)) seconds."
 
 if [[ -f "$IMAGE" ]]; then
-	rm AnyKernel3/Image.gz > /dev/null 2>&1
 	rm AnyKernel3/*.zip > /dev/null 2>&1
 	cp $IMAGE AnyKernel3/Image.gz
 	cd AnyKernel3
 	zip -r9 Kernel-G780G-G781B.zip .
 fi
-
-
-echo "\Time wasted: $(($DIFF / 60)) minute(s) and $(($DIFF % 60)) seconds."
