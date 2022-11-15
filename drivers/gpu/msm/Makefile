@@ -2,7 +2,6 @@
 ccflags-y += -I$(src)
 ccflags-y += $(call cc-option, -funroll-loops,)
 ccflags-y += $(call cc-option, -ffast-math,)
-ccflags-y += $(call cc-option, -Ofast,)
 
 msm_kgsl_core-y = \
 	kgsl.o \
