@@ -9,6 +9,29 @@ KERNEL_MAKE_ENV="DTC_EXT=$(pwd)/tools/dtc CONFIG_BUILD_ARM64_DT_OVERLAY=y"
 make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 CROSS_COMPILE=$BUILD_CROSS_COMPILE \
 	r8q_defconfig
 
+    scripts/configcleaner "
+CONFIG_LTO_GCC
+CONFIG_HAVE_ARCH_PREL32_RELOCATIONS
+"
+
+case $1 in
+   lto)
+    echo "
+
+################# Compiling LTO build #################
+
+"
+    echo "CONFIG_LTO_GCC=y
+" >> out/.config
+   ;;
+
+   *)
+    echo "# CONFIG_LTO_GCC is not set
+CONFIG_HAVE_ARCH_PREL32_RELOCATIONS=y
+" >> out/.config
+   ;;
+esac
+
 make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 CROSS_COMPILE=$BUILD_CROSS_COMPILE \
 	oldconfig
 
