@@ -12,7 +12,12 @@ make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 CROSS_COMPILE=$BUILD
 make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 CROSS_COMPILE=$BUILD_CROSS_COMPILE \
 	oldconfig
 
+DATE_START=$(date +"%s")
+
 make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 CROSS_COMPILE=$BUILD_CROSS_COMPILE
+
+DATE_END=$(date +"%s")
+DIFF=$(($DATE_END - $DATE_START))
 
 IMAGE="out/arch/arm64/boot/Image.gz"
 DTB_OUT="out/arch/arm64/boot/dts/vendor/qcom"
@@ -26,3 +31,6 @@ if [[ -f "$IMAGE" ]]; then
 	cd AnyKernel3
 	zip -r9 Kernel-G780G-G781B.zip .
 fi
+
+
+echo "\Time wasted: $(($DIFF / 60)) minute(s) and $(($DIFF % 60)) seconds."
