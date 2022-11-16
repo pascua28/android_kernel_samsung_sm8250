@@ -30,16 +30,13 @@ EXPORT_SYMBOL_GPL(fips_enabled);
 
 static int IN_FIPS140_ERROR = FIPS140_NO_ERR;
 
-bool in_fips_err(void)
+inline bool in_fips_err(void)
 {
-	return (IN_FIPS140_ERROR == FIPS140_ERR);
+	return false;
 }
 EXPORT_SYMBOL_GPL(in_fips_err);
 
-void set_in_fips_err(void)
-{
-	IN_FIPS140_ERROR = FIPS140_ERR;
-}
+inline void set_in_fips_err(void) {}
 EXPORT_SYMBOL_GPL(set_in_fips_err);
 
 #ifdef CONFIG_CRYPTO_FIPS_FUNC_TEST
