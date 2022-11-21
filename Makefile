@@ -430,17 +430,13 @@ LINUXINCLUDE    := \
 		-I$(objtree)/include \
 		$(USERINCLUDE)
 
-ifeq ($(cc-name),gcc)
-GCC_OPTS	+= --param=max-inline-insns-auto=1000
-endif
-
 KBUILD_AFLAGS   := -D__ASSEMBLY__
 KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -fno-strict-aliasing -fno-common -fshort-wchar \
 		   -Werror-implicit-function-declaration \
 		   -Wno-format-security \
 		   -std=gnu89 \
-		   -pipe $(GCC_OPTS)
+		   -pipe
 KBUILD_CFLAGS	+= -DPLATFORM_VERSION=11.0.0
 KBUILD_CPPFLAGS := -D__KERNEL__
 KBUILD_AFLAGS_KERNEL :=
