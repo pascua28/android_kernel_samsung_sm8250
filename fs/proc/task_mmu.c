@@ -26,11 +26,6 @@
 #include <asm/tlbflush.h>
 #include "internal.h"
 
-#ifdef CONFIG_ZRAM_LRU_WRITEBACK
-#include <linux/delay.h>
-#include "../../drivers/block/zram/zram_drv.h"
-#endif
-
 #define SEQ_PUT_DEC(str, val) \
 		seq_put_decimal_ull_width(m, str, (val) << (PAGE_SHIFT-10), 8)
 void task_mem(struct seq_file *m, struct mm_struct *mm)
@@ -509,9 +504,6 @@ struct mem_size_stats {
 	unsigned long anonymous_thp;
 	unsigned long shmem_thp;
 	unsigned long swap;
-#ifdef CONFIG_ZRAM_LRU_WRITEBACK
-	unsigned long writeback;
-#endif
 	unsigned long shared_hugetlb;
 	unsigned long private_hugetlb;
 	u64 pss;
@@ -607,10 +599,6 @@ static void smaps_pte_entry(pte_t *pte, unsigned long addr,
 			int mapcount;
 
 			mss->swap += PAGE_SIZE;
-#ifdef CONFIG_ZRAM_LRU_WRITEBACK
-			if (is_writeback_entry(swpent))
-				mss->writeback += PAGE_SIZE;
-#endif
 			mapcount = swp_swapcount(swpent);
 			if (mapcount >= 2) {
 				u64 pss_delta = (u64)PAGE_SIZE << PSS_SHIFT;
@@ -875,9 +863,6 @@ static void __show_smap(struct seq_file *m, const struct mem_size_stats *mss)
 	SEQ_PUT_DEC(" kB\nSwap:           ", mss->swap);
 	SEQ_PUT_DEC(" kB\nSwapPss:        ",
 					mss->swap_pss >> PSS_SHIFT);
-#ifdef CONFIG_ZRAM_LRU_WRITEBACK
-	SEQ_PUT_DEC(" kB\nWriteback:      ", mss->writeback);
-#endif
 	SEQ_PUT_DEC(" kB\nLocked:         ",
 					mss->pss_locked >> PSS_SHIFT);
 	seq_puts(m, " kB\n");
