@@ -52,9 +52,11 @@ twrp mount system
 mount -o rw,remount /system_root
 
 patch_prop /system_root/system/build.prop ro.slmk.enable_userspace_lmk false
+patch_prop /system_root/system/build.prop persist.sys.fuse.passthrough.enable true
 
 # Some folks flash this kernel using FKM
-patch_prop system/build.prop ro.slmk.enable_userspace_lmk false
+patch_prop /system/build.prop ro.slmk.enable_userspace_lmk false
+patch_prop /system/build.prop persist.sys.fuse.passthrough.enable true
 
 write_boot;
 ## end boot install
