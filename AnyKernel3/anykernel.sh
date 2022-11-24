@@ -48,9 +48,13 @@ case "$ZIPFILE" in
     ;;
 esac
 
-# begin ramdisk changes
+twrp mount system
+mount -o rw,remount /system_root
 
-# end ramdisk changes
+patch_prop /system_root/system/build.prop ro.slmk.enable_userspace_lmk false
+
+# Some folks flash this kernel using FKM
+patch_prop system/build.prop ro.slmk.enable_userspace_lmk false
 
 write_boot;
 ## end boot install
