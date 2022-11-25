@@ -48,8 +48,11 @@ case "$ZIPFILE" in
     ;;
 esac
 
-twrp mount system
-mount -o rw,remount /system_root
+mount /system/
+mount /system_root/
+
+mount -o rw,remount -t auto /system > /dev/null
+mount -o rw,remount -t auto /system_root > /dev/null
 
 patch_prop /system_root/system/build.prop ro.slmk.enable_userspace_lmk false
 patch_prop /system_root/system/build.prop persist.sys.fuse.passthrough.enable true
