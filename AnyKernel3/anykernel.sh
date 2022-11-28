@@ -29,7 +29,6 @@ ramdisk_compression=auto;
 # import patching functions/variables - see for reference
 . tools/ak3-core.sh;
 
-
 ## AnyKernel file attributes
 # set permissions/ownership for included ramdisk files
 set_perm_recursive 0 0 755 644 $ramdisk/*;
@@ -48,18 +47,29 @@ case "$ZIPFILE" in
     ;;
 esac
 
-mount /system/
-mount /system_root/
+ui_print " "
 
-mount -o rw,remount -t auto /system > /dev/null
-mount -o rw,remount -t auto /system_root > /dev/null
+AKBB="$home/tools/busybox"
 
-patch_prop /system_root/system/build.prop ro.slmk.enable_userspace_lmk false
-patch_prop /system_root/system/build.prop persist.sys.fuse.passthrough.enable true
+patchProps() {
+	ui_print "Patching $1"
+	$AKBB echo -e "\nro.slmk.enable_userspace_lmk=false" >> "$1"
+	$AKBB echo "persist.sys.fuse.passthrough.enable=true" >> "$1"
+}
 
-# Some folks flash this kernel using FKM
-patch_prop /system/build.prop ro.slmk.enable_userspace_lmk false
-patch_prop /system/build.prop persist.sys.fuse.passthrough.enable true
+SLMK_PROP=ro.slmk.enable_userspace_lmk
+SYSTEM=/system
+BUILD_PROP=/system/build.prop
+
+if grep -q "$SLMK_PROP" "$BUILD_PROP"; then
+	ui_print "build.prop already patched"
+else
+	ui_print "Remounting $SYSTEM as rw"
+	$AKBB mount -o rw,remount "$SYSTEM"
+
+	sleep 1
+
+	patchProps "$BUILD_PROP"
+fi
 
 write_boot;
-## end boot install
