@@ -50,14 +50,36 @@ esac
 ui_print " "
 
 AKBB="$home/tools/busybox"
+SLMK_PROP=ro.slmk.enable_userspace_lmk
 
 patchProps() {
 	ui_print "Patching $1"
+	ui_print " "
 	$AKBB echo -e "\nro.slmk.enable_userspace_lmk=false" >> "$1"
 	$AKBB echo "persist.sys.fuse.passthrough.enable=true" >> "$1"
+
+	if grep -q "$SLMK_PROP" "$1"; then
+		ui_print "build.prop successfully patched!"
+		ui_print " "
+	else
+		ui_print " "
+		ui_print "Patching build.prop failed!"
+		ui_print " "
+		ui_print " "
+		ui_print "################################################"
+		ui_print "Please reflash this zip to fix bootloop on OneUI"
+		ui_print " "
+		ui_print "Press volume up/down to confirm you have read the above instruction"
+		ui_print "################################################"
+		while true; do
+			KEY_EVENT="$(getevent -lc 1 2>&1 | grep VOLUME)"
+			if [ ! -z "$KEY_EVENT" ]; then
+				break
+			 fi
+		done
+	fi
 }
 
-SLMK_PROP=ro.slmk.enable_userspace_lmk
 SYSTEM=/system
 BUILD_PROP=/system/build.prop
 
@@ -65,6 +87,7 @@ if grep -q "$SLMK_PROP" "$BUILD_PROP"; then
 	ui_print "build.prop already patched"
 else
 	ui_print "Remounting $SYSTEM as rw"
+	ui_print " "
 	$AKBB mount -o rw,remount "$SYSTEM"
 
 	sleep 1
