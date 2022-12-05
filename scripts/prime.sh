@@ -18,5 +18,8 @@ if ! mount | grep -q "$BIND" && [ ! -e /sbin/recovery ] && [ ! -e /dev/ep/.post_
   chcon "u:object_r:vendor_file:s0" "$BIND"
 fi
 
+/data/sammy/magiskpolicy --live "allow kernel exported_config_prop property_service *"
+setprop ro.slmk.enable_userspace_lmk false
+
 # Re-enable SELinux
 echo "97" > /sys/fs/selinux/enforce
