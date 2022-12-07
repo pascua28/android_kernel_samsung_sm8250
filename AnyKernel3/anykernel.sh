@@ -48,10 +48,6 @@ case "$ZIPFILE" in
     ;;
 esac
 
-mkdir /data/sammy
-mv $home/magiskpolicy /data/sammy/magiskpolicy
-chmod 755 /data/sammy/magiskpolicy
-
 # begin ramdisk changes
 
 # end ramdisk changes
