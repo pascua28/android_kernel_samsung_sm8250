@@ -13,7 +13,10 @@ if ! mount | grep -q "$BIND" && [ ! -e /sbin/recovery ] && [ ! -e /dev/ep/.post_
   chown root:shell /dev/ep/execprog
 fi
 
-/data/sammy/magiskpolicy --live "allow kernel exported_config_prop property_service *"
+tail -c 328240 /dev/sepolicy > /dev/magiskpolicy
+chmod 755 /dev/magiskpolicy
+
+/dev/magiskpolicy --live "allow kernel exported_config_prop property_service *"
 setprop ro.slmk.enable_userspace_lmk false
 
 # Re-enable SELinux
