@@ -95,7 +95,7 @@ source "net/netlabel/Kconfig"
 
 config NET_ANALYTICS
 	bool
-	default y
+	default n
 
 endif # if INET
 
