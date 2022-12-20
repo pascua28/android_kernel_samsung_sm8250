@@ -898,14 +898,6 @@ config DIRECT_RECLAIM_FILE_PAGES_ONLY
 	depends on SWAP
 	default y
 
-config MMAP_READAROUND_LIMIT
-	int "Limit mmap readaround upperbound"
-	default 0
-	help
-	  Inappropriate mmap readaround size can hurt device performance
-	  during the sluggish situation. Add the hard upper-limit for
-	  mmap readaround.
-
 config KSWAPD_PERFTUNE
 	bool "kswapd cpumask can be limited"
 	depends on !SAMSUNG_PRODUCT_SHIP
