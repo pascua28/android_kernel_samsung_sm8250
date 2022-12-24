@@ -31,10 +31,7 @@ static unsigned long lowfile_count(struct shrinker *s,
 			K(min_file));
 #ifdef CONFIG_SEC_MM
                 show_mem(0, NULL);
-#else
-                mm_debug_show_free_areas();
 #endif
-		mm_debug_dump_tasks();
 	}
 
 	return 0; /* return 0 not to call to scan_objects */
