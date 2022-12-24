@@ -1261,7 +1261,7 @@ static inline void __ion_account_print_locked(void)
 		pr_info("heaviest_task_ion:%s(%5u) size:%zuKB, total:%zuKB/%luKB\n",
 			ion_size_acc[heaviest_idx].task_comm,
 			ion_size_acc[heaviest_idx].pid, heaviest_size / SZ_1K,
-			total / SZ_1K, totalram_pages << (PAGE_SHIFT - 10));
+			total / SZ_1K, totalram_pages() << (PAGE_SHIFT - 10));
 }
 
 bool ion_account_print_usage(void)
