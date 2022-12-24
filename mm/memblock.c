@@ -2286,7 +2286,7 @@ static int memsize_reserved_show(struct seq_file *m, void *private)
 	int i;
 	struct reserved_mem_reg *rmem_reg;
 	unsigned long dt_reserved = 0, reusable = 0, kernel, total;
-	unsigned long system = totalram_pages << PAGE_SHIFT;
+	unsigned long system = totalram_pages() << PAGE_SHIFT;
 
 #ifdef CONFIG_ION_RBIN_HEAP
 	system += totalrbin_pages << PAGE_SHIFT;

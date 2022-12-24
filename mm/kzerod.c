@@ -446,7 +446,7 @@ void init_hugepage_pool(void)
 	struct zone *zone;
 
 	long hugepage_quota = get_hugepage_quota();
-	long avail_low = totalram_pages >> 2;
+	long avail_low = totalram_pages() >> 2;
 	long avail_high = avail_low + (avail_low >> 2);
 	uint32_t totalram_pages_uint = totalram_pages;
 
@@ -458,15 +458,15 @@ void init_hugepage_pool(void)
 		 * calculate without zone lock as we assume managed_pages of
 		 * zones do not change at runtime
 		 */
-		num_pages = (u64)hugepage_quota * zone->managed_pages;
+		num_pages = (u64)hugepage_quota * zone_managed_pages(zone);
 		do_div(num_pages, totalram_pages_uint);
 		nr_hugepages_quota[zidx] = (num_pages >> HUGEPAGE_ORDER);
 		nr_hugepages_limit[zidx] = nr_hugepages_quota[zidx];
 
-		hugepage_avail_low[zidx] = (u64)avail_low * zone->managed_pages;
+		hugepage_avail_low[zidx] = (u64)avail_low * zone_managed_pages(zone);
 		do_div(hugepage_avail_low[zidx], totalram_pages_uint);
 
-		hugepage_avail_high[zidx] = (u64)avail_high * zone->managed_pages;
+		hugepage_avail_high[zidx] = (u64)avail_high * zone_managed_pages(zone);
 		do_div(hugepage_avail_high[zidx], totalram_pages_uint);
 
 		spin_lock_init(&hugepage_list_lock[zidx]);
