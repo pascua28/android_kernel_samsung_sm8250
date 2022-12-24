@@ -6,7 +6,6 @@
 #define MB_TO_PAGES(x) ((x) << (20 - PAGE_SHIFT))
 #define K(x) ((x) << (PAGE_SHIFT-10))
 
-void mm_debug_show_free_areas(void);
 void mm_debug_dump_tasks(void);
 
 void init_lowfile_detect(void);
