@@ -1949,7 +1949,6 @@ static ssize_t reclaim_write(struct file *file, const char __user *buf,
 	struct vm_area_struct *vma;
 	enum reclaim_type type;
 	char *type_buf;
-	int err;
 
 	if (!capable(CAP_SYS_NICE))
 		return -EPERM;
