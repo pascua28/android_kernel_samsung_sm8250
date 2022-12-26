@@ -96,12 +96,12 @@ static inline void kzerod_update_wmark(void)
 	static unsigned long kzerod_totalram_pages = 0;
 	int i, array_size;
 
-	if (!kzerod_totalram_pages || kzerod_totalram_pages != totalram_pages) {
-		kzerod_totalram_pages = totalram_pages;
+	if (!kzerod_totalram_pages || kzerod_totalram_pages != totalram_pages()) {
+		kzerod_totalram_pages = totalram_pages();
 
 		array_size = ARRAY_SIZE(kzerod_totalram);
 		for (i = 0; i < array_size; i++) {
-			if (totalram_pages <= kzerod_totalram[i]) {
+			if (totalram_pages() <= kzerod_totalram[i]) {
 				kzerod_wmark_high = kzerod_wmark[i];
 				break;
 			}
@@ -433,9 +433,9 @@ static unsigned long hugepage_avail_high[MAX_NR_ZONES];
 /* default policy : 1GB@8GB, 2GB@12GB */
 static inline unsigned long get_hugepage_quota(void)
 {
-	if (totalram_pages > GB_TO_PAGES(10))
+	if (totalram_pages() > GB_TO_PAGES(10))
 		return GB_TO_PAGES(2);
-	else if (totalram_pages > GB_TO_PAGES(6))
+	else if (totalram_pages() > GB_TO_PAGES(6))
 		return GB_TO_PAGES(1);
 	else
 		return GB_TO_PAGES(0);
@@ -448,7 +448,7 @@ void init_hugepage_pool(void)
 	long hugepage_quota = get_hugepage_quota();
 	long avail_low = totalram_pages() >> 2;
 	long avail_high = avail_low + (avail_low >> 2);
-	uint32_t totalram_pages_uint = totalram_pages;
+	uint32_t totalram_pages_uint = totalram_pages();
 
 	for_each_zone(zone) {
 		u64 num_pages;
