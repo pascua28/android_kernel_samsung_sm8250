@@ -5,8 +5,6 @@
 
 ccflags-$(CONFIG_RTC_DEBUG)	:= -DDEBUG
 
-subdir-ccflags-y += -Os
-
 obj-$(CONFIG_RTC_LIB)		+= rtc-lib.o
 obj-$(CONFIG_RTC_HCTOSYS)	+= hctosys.o
 obj-$(CONFIG_RTC_SYSTOHC)	+= systohc.o
