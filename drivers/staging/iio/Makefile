@@ -11,5 +11,3 @@ obj-y += frequency/
 obj-y += impedance-analyzer/
 obj-y += meter/
 obj-y += resolver/
-
-subdir-ccflags-y += -Os
