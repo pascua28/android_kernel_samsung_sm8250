@@ -42,13 +42,13 @@ make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 CROSS_COMPILE=$BUILD
 IMAGE="out/arch/arm64/boot/Image.gz"
 DTB_OUT="out/arch/arm64/boot/dts/vendor/qcom"
 
-cat $DTB_OUT/kona.dtb $DTB_OUT/kona-v2.dtb $DTB_OUT/kona-v2.1.dtb > AnyKernel3/kona.dtb
+cat $DTB_OUT/*.dtb > AnyKernel3/kona.dtb
 
 patch -p1 --merge < patches/freqtable.diff
 
 make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 CROSS_COMPILE=$BUILD_CROSS_COMPILE dtbs
 
-cat $DTB_OUT/kona.dtb $DTB_OUT/kona-v2.dtb $DTB_OUT/kona-v2.1.dtb > AnyKernel3/kona-perf.dtb
+cat $DTB_OUT/*.dtb > AnyKernel3/kona-perf.dtb
 
 patch -p1 -R --merge < patches/freqtable.diff
 
