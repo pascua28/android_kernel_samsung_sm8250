@@ -375,7 +375,7 @@ KBUILD_HOSTLDLIBS   := $(HOST_LFS_LIBS) $(HOSTLDLIBS)
 # Make variables (CC, etc...)
 CPP		= $(CC) -E
 ifneq ($(LLVM),)
-CC		= $(CLANG_DIR)clang
+CC		= ccache $(CLANG_DIR)clang
 LD		= $(CLANG_DIR)ld.lld
 AR		= $(CLANG_DIR)llvm-ar
 NM		= $(CLANG_DIR)llvm-nm
