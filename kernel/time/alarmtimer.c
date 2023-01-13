@@ -401,13 +401,13 @@ static int alarmtimer_suspend(struct device *dev)
 	if (min_alarm)
 		pr_info("soonest alarm : %ps\n", min_alarm->function);
 #endif
-	
+
 	if (ktime_to_ns(min) < 2 * NSEC_PER_SEC) {
 #if IS_ENABLED(CONFIG_SEC_PM)
 		pr_info("alarmtimer suspending blocked by %ps\n", min_alarm->function);
 		log_suspend_abort_reason("alarmtimer suspending blocked by %ps\n", min_alarm->function);
 #endif
-		__pm_wakeup_event(ws, 2 * MSEC_PER_SEC);
+		__pm_wakeup_event(ws, ktime_to_ms(min) + 1);
 		return -EBUSY;
 	}
 
