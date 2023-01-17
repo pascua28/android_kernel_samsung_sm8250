@@ -4,7 +4,7 @@
 #
 
 #
-# Compiler: aarch64-elf-gcc (GCC) 12.2.1 20221228
+# Compiler: aarch64-linux-gnu-gcc (GCC) 12.2.1 20230113
 #
 CONFIG_CC_IS_GCC=y
 CONFIG_GCC_VERSION=120201
