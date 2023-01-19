@@ -6,6 +6,25 @@ mkdir out
 BUILD_CROSS_COMPILE=aarch64-linux-gnu-
 KERNEL_MAKE_ENV="DTC_EXT=$(pwd)/tools/dtc CONFIG_BUILD_ARM64_DT_OVERLAY=y"
 
+echo "**********************************"
+echo "Select load-tracking variant"
+echo "(1) WALT"
+echo "(2) PELT"
+read -p "Selected variant: " variant
+
+if [ $variant == "1" ]; then
+    echo "
+Compiling WALT variant
+"
+
+elif [ $variant == "2" ]; then
+    echo "
+Compiling PELT variant
+"
+    ## Refer to PELT branch for the commits
+    git diff 6ab38e5de70b0ebe1c8e1e2e50135ae695d7373e^..92838c20b4a6c1f0dbe00b183a374bde5e9aeee4 | patch -p1 --merge
+fi
+
 make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 CROSS_COMPILE=$BUILD_CROSS_COMPILE \
 	r8q_defconfig
 
@@ -51,6 +70,10 @@ make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 CROSS_COMPILE=$BUILD
 cat $DTB_OUT/*.dtb > AnyKernel3/kona-perf.dtb
 
 patch -p1 -R --merge < patches/freqtable.diff
+
+if [ $variant == "2" ]; then
+    git diff 6ab38e5de70b0ebe1c8e1e2e50135ae695d7373e^..92838c20b4a6c1f0dbe00b183a374bde5e9aeee4 | patch -p1 -R --merge
+fi
 
 DATE_END=$(date +"%s")
 DIFF=$(($DATE_END - $DATE_START))
