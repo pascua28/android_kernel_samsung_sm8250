@@ -24,7 +24,7 @@
 #include <linux/elfnote.h>
 #include <linux/build-salt.h>
 
-ELFNOTE_START(Linux, 0)
+ELFNOTE_START(Linux, 0, "a")
 	.long LINUX_VERSION_CODE
 ELFNOTE_END
 
