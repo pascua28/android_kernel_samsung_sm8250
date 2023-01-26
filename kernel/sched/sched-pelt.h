@@ -13,6 +13,112 @@ static const u32 pelt32_runnable_avg_yN_inv[] __maybe_unused = {
 #define PELT32_LOAD_AVG_PERIOD 32
 #define PELT32_LOAD_AVG_MAX 47742
 
+static const u32 pelt30_runnable_avg_yN_inv[] __maybe_unused = {
+        0xffffffff, 0xfa2727da, 0xf4707fd4, 0xeedb4007, 0xe966a51e, 0xe411f039,
+        0xdedc66d6, 0xd9c552b3, 0xd4cc01ba, 0xcfefc5e5, 0xcb2ff529, 0xc68be95a,
+        0xc203001c, 0xbd949ac5, 0xb9401e4c, 0xb504f333, 0xb0e28570, 0xacd8445b,
+        0xa8e5a29d, 0xa50a1614, 0xa14517cb, 0x9d9623df, 0x99fcb970, 0x96785a91,
+        0x93088c35, 0x8facd61d, 0x8c64c2cc, 0x892fdf70, 0x860dbbda, 0x82fdea6a,
+};
+
+#define PELT30_LOAD_AVG_PERIOD 30
+#define PELT30_LOAD_AVG_MAX 44790
+
+static const u32 pelt28_runnable_avg_yN_inv[] __maybe_unused = {
+        0xffffffff, 0xf9bd8e48, 0xf3a24b24, 0xedad4152, 0xe7dd818c, 0xe2322269,
+        0xdcaa4034, 0xd744fcc9, 0xd2017f74, 0xccdef4cc, 0xc7dc8e94, 0xc2f98399,
+        0xbe350f94, 0xb98e730b, 0xb504f333, 0xb097d9d0, 0xac46751e, 0xa81017af,
+        0xa3f41854, 0x9ff1d200, 0x9c08a3b0, 0x9837f050, 0x947f1ea5, 0x90dd9931,
+        0x8d52ce1f, 0x89de2f2b, 0x867f318b, 0x83354dd8,
+};
+
+#define PELT28_LOAD_AVG_PERIOD 28
+#define PELT28_LOAD_AVG_MAX 41839
+
+static const u32 pelt26_runnable_avg_yN_inv[] __maybe_unused = {
+        0xffffffff, 0xf943ed16, 0xf2b5353d, 0xec52a6fd, 0xe61b18ec, 0xe00d6972,
+        0xda287e94, 0xd46b45c2, 0xced4b3a8, 0xc963c3f8, 0xc417793c, 0xbeeedcac,
+        0xb9e8fdfc, 0xb504f333, 0xb041d87e, 0xab9ed00c, 0xa71b01de, 0xa2b59ba6,
+        0x9e6dd09d, 0x9a42d961, 0x9633f3cc, 0x924062d7, 0x8e676e70, 0x8aa86360,
+        0x87029325, 0x837553d5,
+};
+
+#define PELT26_LOAD_AVG_PERIOD 26
+#define PELT26_LOAD_AVG_MAX 38887
+
+static const u32 pelt24_runnable_avg_yN_inv[] __maybe_unused = {
+        0xffffffff, 0xf8b65139, 0xf1a1bf37, 0xeac0c6e6, 0xe411f039, 0xdd93cdd6,
+        0xd744fcc9, 0xd124243d, 0xcb2ff529, 0xc5672a10, 0xbfc886ba, 0xba52d7ee,
+        0xb504f333, 0xafddb68e, 0xaadc0846, 0xa5fed6a9, 0xa14517cb, 0x9cadc957,
+        0x9837f050, 0x93e298df, 0x8facd61d, 0x8b95c1e3, 0x879c7c96, 0x83c02cf9,
+};
+
+#define PELT24_LOAD_AVG_PERIOD 24
+#define PELT24_LOAD_AVG_MAX 35936
+
+static const u32 pelt22_runnable_avg_yN_inv[] __maybe_unused = {
+        0xffffffff, 0xf80f5dd0, 0xf05dc6b1, 0xe8e94611, 0xe1aff6e7, 0xdab00335,
+        0xd3e7a391, 0xcd551eb0, 0xc6f6c8f7, 0xc0cb0410, 0xbad03e7c, 0xb504f333,
+        0xaf67a93b, 0xa9f6f34c, 0xa4b16f74, 0x9f95c6b9, 0x9aa2acc6, 0x95d6df94,
+        0x91312718, 0x8cb054f6, 0x88534433, 0x8418d8e8,
+};
+
+#define PELT22_LOAD_AVG_PERIOD 22
+#define PELT22_LOAD_AVG_MAX 32984
+
+static const u32 pelt20_runnable_avg_yN_inv[] __maybe_unused = {
+        0xffffffff, 0xf7479a6d, 0xeedb4007, 0xe6b859ad, 0xdedc66d6, 0xd744fcc9,
+        0xcfefc5e5, 0xc8da80e0, 0xc203001c, 0xbb6728fa, 0xb504f333, 0xaeda6839,
+        0xa8e5a29d, 0xa324cd78, 0x9d9623df, 0x9837f050, 0x93088c35, 0x8e065f59,
+        0x892fdf70, 0x84838f9e,
+};
+
+#define PELT20_LOAD_AVG_PERIOD 20
+#define PELT20_LOAD_AVG_MAX 30032
+
+static const u32 pelt18_runnable_avg_yN_inv[] __maybe_unused = {
+        0xffffffff, 0xf6544d25, 0xed062008, 0xe411f039, 0xdb745776, 0xd32a105b,
+        0xcb2ff529, 0xc382fe8e, 0xbc204284, 0xb504f333, 0xae2e5de1, 0xa799e9eb,
+        0xa14517cb, 0x9b2d8023, 0x9550d2d4, 0x8facd61d, 0x8a3f65c3, 0x85067241,
+};
+
+#define PELT18_LOAD_AVG_PERIOD 18
+#define PELT18_LOAD_AVG_MAX 27081
+
+static const u32 pelt16_runnable_avg_yN_inv[] __maybe_unused = {
+        0xffffffff, 0xf5257d14, 0xeac0c6e6, 0xe0ccdeeb, 0xd744fcc9, 0xce248c14,
+        0xc5672a10, 0xbd08a39e, 0xb504f333, 0xad583ee9, 0xa5fed6a9, 0x9ef5325f,
+        0x9837f050, 0x91c3d373, 0x8b95c1e3, 0x85aac367,
+};
+
+#define PELT16_LOAD_AVG_PERIOD 16
+#define PELT16_LOAD_AVG_MAX 24130
+
+static const u32 pelt14_runnable_avg_yN_inv[] __maybe_unused = {
+        0xffffffff, 0xf3a24b24, 0xe7dd818c, 0xdcaa4034, 0xd2017f74, 0xc7dc8e94,
+        0xbe350f94, 0xb504f333, 0xac46751e, 0xa3f41854, 0x9c08a3b0, 0x947f1ea5,
+        0x8d52ce1f, 0x867f318b,
+};
+
+#define PELT14_LOAD_AVG_PERIOD 14
+#define PELT14_LOAD_AVG_MAX 21178
+
+static const u32 pelt12_runnable_avg_yN_inv[] __maybe_unused = {
+        0xffffffff, 0xf1a1bf37, 0xe411f039, 0xd744fcc9, 0xcb2ff529, 0xbfc886ba,
+        0xb504f333, 0xaadc0846, 0xa14517cb, 0x9837f050, 0x8facd61d, 0x879c7c96,
+};
+
+#define PELT12_LOAD_AVG_PERIOD 12
+#define PELT12_LOAD_AVG_MAX 18227
+
+static const u32 pelt10_runnable_avg_yN_inv[] __maybe_unused = {
+        0xffffffff, 0xeedb4007, 0xdedc66d6, 0xcfefc5e5, 0xc203001c, 0xb504f333,
+        0xa8e5a29d, 0x9d9623df, 0x93088c35, 0x892fdf70,
+};
+
+#define PELT10_LOAD_AVG_PERIOD 10
+#define PELT10_LOAD_AVG_MAX 15277
+
 static const u32 pelt8_runnable_avg_yN_inv[] __maybe_unused = {
 	0xffffffff, 0xeac0c6e6, 0xd744fcc9, 0xc5672a10,
 	0xb504f333, 0xa5fed6a9, 0x9837f050, 0x8b95c1e3,
