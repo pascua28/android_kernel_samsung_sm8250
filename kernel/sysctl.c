@@ -738,6 +738,15 @@ static struct ctl_table kern_table[] = {
 		.mode		= 0644,
 		.proc_handler	= sched_rr_handler,
 	},
+#ifdef CONFIG_SMP
+	{
+		.procname	= "sched_pelt_halflife",
+		.data		= &sysctl_sched_pelt_halflife,
+		.maxlen		= sizeof(unsigned int),
+		.mode		= 0644,
+		.proc_handler	= sched_pelt_halflife,
+	},
+#endif
 #ifdef CONFIG_UCLAMP_TASK
 	{
 		.procname	= "sched_util_clamp_min",
