@@ -447,7 +447,6 @@ config WALT_POWER_FEATURE
 
 config SCHED_SEC_TASK_BOOST
 	bool "Enable Task Priority Boost"
-	depends on SCHED_WALT
 	default n
 	help
 	  This feature will boost task based on priority(=nice) value.
