@@ -22,7 +22,7 @@ elif [ $variant == "2" ]; then
 Compiling PELT variant
 "
     ## Refer to PELT branch for the commits
-    git diff 6ab38e5de70b0ebe1c8e1e2e50135ae695d7373e^..92838c20b4a6c1f0dbe00b183a374bde5e9aeee4 | patch -p1 --merge
+    git diff 6ab38e5de70b0ebe1c8e1e2e50135ae695d7373e^..e496b354444f70c4bc69bc3c9bdfd153daeeaca4 | patch -p1 --merge
 fi
 
 make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 CROSS_COMPILE=$BUILD_CROSS_COMPILE \
@@ -72,7 +72,7 @@ cat $DTB_OUT/*.dtb > AnyKernel3/kona-perf.dtb
 patch -p1 -R --merge < patches/freqtable.diff
 
 if [ $variant == "2" ]; then
-    git diff 6ab38e5de70b0ebe1c8e1e2e50135ae695d7373e^..92838c20b4a6c1f0dbe00b183a374bde5e9aeee4 | patch -p1 -R --merge
+    git diff 6ab38e5de70b0ebe1c8e1e2e50135ae695d7373e^..e496b354444f70c4bc69bc3c9bdfd153daeeaca4 | patch -p1 -R --merge
 fi
 
 DATE_END=$(date +"%s")
