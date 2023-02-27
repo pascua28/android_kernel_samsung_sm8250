@@ -5763,7 +5763,7 @@ int __init workqueue_init_early(void)
 {
 	int std_nice[NR_STD_WORKER_POOLS] = { 0, HIGHPRI_NICE_LEVEL };
 	int i, cpu;
-	static const unsigned long lp_cpu_bits = 15;
+	static const unsigned long lp_cpu_bits = 12;
 	const struct cpumask *const cpu_lp_mask = to_cpumask(&lp_cpu_bits);
 
 	WARN_ON(__alignof__(struct pool_workqueue) < __alignof__(long long));
