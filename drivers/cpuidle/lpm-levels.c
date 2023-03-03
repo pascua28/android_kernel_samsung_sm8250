@@ -1259,60 +1259,10 @@ unlock_and_return:
 	return state_id;
 }
 
-static int psci_enter_idle(struct cpuidle_device *dev, struct lpm_cpu *cpu,
-			    int idx)
+static int psci_enter_sleep(struct lpm_cpu *cpu, int idx, bool from_idle)
 {
 	int affinity_level = 0, state_id = 0, power_state = 0;
 	int ret, success;
-	const bool from_idle = true;
-
-	/*
-	 * idx = 0 is the default LPM state
-	 */
-
-	if (!idx) {
-		if (cpu->bias)
-			biastimer_start(cpu->bias);
-		cpuidle_set_idle_cpu(dev->cpu);
-		stop_critical_timings();
-		cpu_do_idle();
-		start_critical_timings();
-		cpuidle_clear_idle_cpu(dev->cpu);
-		return 0;
-	}
-
-	if (from_idle && cpu->levels[idx].use_bc_timer) {
-		ret = tick_broadcast_enter();
-		if (ret)
-			return ret;
-	}
-
-	state_id = get_cluster_id(cpu->parent, &affinity_level, from_idle);
-	power_state = PSCI_POWER_STATE(cpu->levels[idx].is_reset);
-	affinity_level = PSCI_AFFINITY_LEVEL(affinity_level);
-	state_id += power_state + affinity_level + cpu->levels[idx].psci_id;
-
-	cpuidle_set_idle_cpu(dev->cpu);
-	stop_critical_timings();
-
-	ret = !arm_cpuidle_suspend(state_id);
-	success = (ret == 0);
-
-	start_critical_timings();
-	cpuidle_clear_idle_cpu(dev->cpu);
-
-	if (from_idle && cpu->levels[idx].use_bc_timer)
-		tick_broadcast_exit();
-
-	return ret;
-}
-
-static int psci_enter_sleep(struct lpm_cpu *cpu, int idx)
-{
-	int affinity_level = 0, state_id = 0, power_state = 0;
-	int ret, success;
-	const bool from_idle = false;
-
 	/*
 	 * idx = 0 is the default LPM state
 	 */
@@ -1413,7 +1363,9 @@ static int lpm_cpuidle_enter(struct cpuidle_device *dev,
 	if (need_resched())
 		goto exit;
 
-	ret = psci_enter_idle(dev, cpu, idx);
+	cpuidle_set_idle_cpu(dev->cpu);
+	ret = psci_enter_sleep(cpu, idx, true);
+	cpuidle_clear_idle_cpu(dev->cpu);
 	success = (ret == 0);
 
 exit:
@@ -1457,7 +1409,7 @@ static void lpm_cpuidle_s2idle(struct cpuidle_device *dev,
 	cpu_prepare(cpu, idx, true);
 	cluster_prepare(cpu->parent, cpumask, idx, false, 0);
 
-	ret = psci_enter_sleep(cpu, idx);
+	ret = psci_enter_sleep(cpu, idx, false);
 	success = (ret == 0);
 
 	cluster_unprepare(cpu->parent, cpumask, idx, false, 0, success);
@@ -1720,7 +1672,7 @@ static int lpm_suspend_enter(suspend_state_t state)
 	cpu_prepare(lpm_cpu, idx, false);
 	cluster_prepare(cluster, cpumask, idx, false, 0);
 
-	ret = psci_enter_sleep(lpm_cpu, idx);
+	ret = psci_enter_sleep(lpm_cpu, idx, false);
 	success = (ret == 0);
 
 	cluster_unprepare(cluster, cpumask, idx, false, 0, success);
