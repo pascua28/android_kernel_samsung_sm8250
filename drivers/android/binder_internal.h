@@ -70,7 +70,9 @@ struct binderfs_info {
 	kgid_t root_gid;
 	struct binderfs_mount_opts mount_opts;
 	int device_count;
+#ifdef CONFIG_ANDROID_BINDER_LOGS
 	struct dentry *proc_log_dir;
+#endif
 };
 
 extern const struct file_operations binder_fops;
