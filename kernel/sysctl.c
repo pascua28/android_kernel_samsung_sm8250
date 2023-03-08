@@ -1868,14 +1868,6 @@ static struct ctl_table vm_table[] = {
 		.extra1		= &zero,
 	},
 	{
-		.procname	= "watermark_boost_factor",
-		.data		= &watermark_boost_factor,
-		.maxlen		= sizeof(watermark_boost_factor),
-		.mode		= 0644,
-		.proc_handler	= watermark_boost_factor_sysctl_handler,
-		.extra1		= &zero,
-	},
-	{
 		.procname	= "kswapd_threads",
 		.data		= &kswapd_threads,
 		.maxlen		= sizeof(kswapd_threads),
