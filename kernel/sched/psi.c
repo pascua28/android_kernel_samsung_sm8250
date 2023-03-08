@@ -546,10 +546,8 @@ static u64 update_triggers(struct psi_group *group, u64 now)
 			continue;
 
 		/* Generate an event */
-		if (cmpxchg(&t->event, 0, 1) == 0) {
-			trace_psi_update_trigger_wake_up(t, growth);
+		if (cmpxchg(&t->event, 0, 1) == 0)
 			wake_up_interruptible(&t->event_wait);
-		}
 		t->last_event_time = now;
 	}
 
