@@ -29,7 +29,6 @@ ccflags-y += -fuse-ld=lld
 endif
 
 ccflags-y += $(call cc-option, -fno-whole-program)
-ccflags-y += -O3
 
 
 obj-y += vdso.o
