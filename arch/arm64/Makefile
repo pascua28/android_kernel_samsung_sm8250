@@ -56,6 +56,10 @@ $(warning Detected assembler with broken .inst; disassembly will be unreliable)
   endif
 endif
 
+ifeq ($(CONFIG_ARCH_KONA), y)
+KBUILD_CFLAGS   += -march=armv8.2-a -mcpu=cortex-a76.cortex-a55 -mtune=cortex-a76.cortex-a55
+endif
+
 KBUILD_CFLAGS	+= -mgeneral-regs-only
 KBUILD_CFLAGS	+= $(lseinstr) $(brokengasinst)
 KBUILD_CFLAGS	+= -fno-asynchronous-unwind-tables
