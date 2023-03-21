@@ -58,6 +58,8 @@ DATE_START=$(date +"%s")
 
 make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 CROSS_COMPILE=$BUILD_CROSS_COMPILE
 
+make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 CROSS_COMPILE=$BUILD_CROSS_COMPILE dtbs
+
 IMAGE="out/arch/arm64/boot/Image.gz"
 DTB_OUT="out/arch/arm64/boot/dts/vendor/qcom"
 
