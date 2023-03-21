@@ -80,6 +80,10 @@ fi
 DATE_END=$(date +"%s")
 DIFF=$(($DATE_END - $DATE_START))
 
+DTBO_FILES=$(find $(pwd)/out/arch/arm64/boot/dts/samsung/ -name kona-sec-*-r*.dtbo)
+$(pwd)/tools/mkdtimg create $(pwd)/out/dtbo.img --page_size=4096 ${DTBO_FILES}
+mv $(pwd)/out/dtbo.img AnyKernel3/dtbo.img
+
 echo "Time wasted: $(($DIFF / 60)) minute(s) and $(($DIFF % 60)) seconds."
 
 if [[ -f "$IMAGE" ]]; then

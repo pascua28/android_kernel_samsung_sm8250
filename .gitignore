@@ -143,3 +143,4 @@ out/
 *.out
 dtb
 zImage
+dtbo.img
