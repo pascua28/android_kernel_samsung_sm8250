@@ -30,6 +30,7 @@
 #include <linux/suspend.h>
 #include <linux/syscore_ops.h>
 #include <linux/tick.h>
+#include <linux/binfmts.h>
 #include <linux/sched/topology.h>
 #include <linux/sched/sysctl.h>
 #include <trace/events/power.h>
@@ -723,7 +724,7 @@ static ssize_t store_##file_name					\
 	int ret, temp;							\
 	struct cpufreq_policy new_policy;				\
 									\
-	if (likely(&policy->object == &policy->min))			\
+	if (likely(task_is_booster(current)))				\
 		return count;						\
 									\
 	memcpy(&new_policy, policy, sizeof(*policy));			\
@@ -2359,8 +2360,13 @@ static int cpufreq_set_policy(struct cpufreq_policy *policy,
  */
 void cpufreq_update_policy(unsigned int cpu)
 {
-	struct cpufreq_policy *policy = cpufreq_cpu_get(cpu);
+	struct cpufreq_policy *policy;
 	struct cpufreq_policy new_policy;
+
+	if (likely(task_is_booster(current)))
+		return;
+
+	policy = cpufreq_cpu_get(cpu);
 
 	if (!policy)
 		return;
