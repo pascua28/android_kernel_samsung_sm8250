@@ -613,6 +613,7 @@ config STRING_SELFTEST
 
 config FFSI
 	bool
+	depends on SCHED_WALT
 	default y
 	help
 	  Library to support FFSI class as the realization of Elastic Capacity
