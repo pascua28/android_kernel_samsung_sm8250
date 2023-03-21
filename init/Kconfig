@@ -438,13 +438,6 @@ config SCHED_WALT
 	used to guide task placement as well as task frequency requirements
 	for cpufreq governors.
 
-config WALT_POWER_FEATURE
-	bool "Power enhance feature in WALT scheduler"
-	depends on SCHED_WALT
-	default n
-	help
-	  This feature save power by adjust start cpu
-
 config SCHED_SEC_TASK_BOOST
 	bool "Enable Task Priority Boost"
 	depends on SCHED_WALT
@@ -521,6 +514,13 @@ config TASK_XACCT
 	  to userland for processing over the taskstats interface.
 
 	  Say N if unsure.
+
+config WALT_POWER_FEATURE
+	bool "Power enhance feature in WALT scheduler"
+	depends on SCHED_WALT
+	default n
+	help
+	  This feature save power by adjust start cpu
 
 config TASK_IO_ACCOUNTING
 	bool "Enable per-task storage I/O accounting"
