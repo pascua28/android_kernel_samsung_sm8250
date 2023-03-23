@@ -5071,8 +5071,8 @@
 			display_gpio_regulator@1 {
 				compatible = "regulator-fixed-disable";
 				regulator-name = "display_panel_avdd";
-				regulator-min-microvolt = <0x5265c0>;
-				regulator-max-microvolt = <0x5265c0>;
+				regulator-min-microvolt = <0x51a270>;
+				regulator-max-microvolt = <0x51a270>;
 				regulator-enable-ramp-delay = <0xe9>;
 				gpio = <0xffffffff 0x3d 0x0>;
 				enable-active-high;
