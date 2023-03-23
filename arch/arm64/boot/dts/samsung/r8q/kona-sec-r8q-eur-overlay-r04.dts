@@ -1672,7 +1672,7 @@
 						reg-names = "ab_base";
 						regulator-name = "ab";
 						regulator-min-microvolt = <0x4630c0>;
-						regulator-max-microvolt = <0x5d1420>;
+						regulator-max-microvolt = <0x5b8d80>;
 						qcom,swire-control;
 						phandle = <0x25>;
 					};
@@ -1682,7 +1682,7 @@
 						reg-names = "ibb_base";
 						regulator-name = "ibb";
 						regulator-min-microvolt = <0xc3500>;
-						regulator-max-microvolt = <0x5265c0>;
+						regulator-max-microvolt = <0x50df20>;
 						qcom,swire-control;
 						phandle = <0x26>;
 					};
@@ -5071,8 +5071,8 @@
 			display_gpio_regulator@1 {
 				compatible = "regulator-fixed-disable";
 				regulator-name = "display_panel_avdd";
-				regulator-min-microvolt = <0x53ec60>;
-				regulator-max-microvolt = <0x53ec60>;
+				regulator-min-microvolt = <0x5265c0>;
+				regulator-max-microvolt = <0x5265c0>;
 				regulator-enable-ramp-delay = <0xe9>;
 				gpio = <0xffffffff 0x3d 0x0>;
 				enable-active-high;
