@@ -3460,7 +3460,6 @@ static void sd_probe_async(void *data, async_cookie_t cookie)
 	}
 
 	blk_pm_runtime_init(sdp->request_queue, dev);
-<<<<<<< HEAD
 	if (sdp->autosuspend_delay >= 0)
 		pm_runtime_set_autosuspend_delay(dev, sdp->autosuspend_delay);
 
@@ -3470,13 +3469,10 @@ static void sd_probe_async(void *data, async_cookie_t cookie)
 		msleep(500);
 	}
 #endif
-	device_add_disk(dev, gd);
+	device_add_disk(dev, gd, NULL);
 #ifdef CONFIG_USB_STORAGE_DETECT
 	sdkp->prv_media_present = sdkp->media_present;
 #endif
-=======
-	device_add_disk(dev, gd, NULL);
->>>>>>> 78fec1611cbf7b0bdaddfdbf174a3a2463663bff
 	if (sdkp->capacity)
 		sd_dif_config_host(sdkp);
 
