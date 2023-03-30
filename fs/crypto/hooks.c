@@ -9,7 +9,7 @@
 #include "fscrypt_private.h"
 
 /**
- * fscrypt_file_open - prepare to open a possibly-encrypted regular file
+ * fscrypt_file_open() - prepare to open a possibly-encrypted regular file
  * @inode: the inode being opened
  * @filp: the struct file being set up
  *
@@ -59,8 +59,8 @@ int __fscrypt_prepare_link(struct inode *inode, struct inode *dir,
 	if (err)
 		return err;
 
-	/* ... in case we looked up ciphertext name before key was added */
-	if (dentry->d_flags & DCACHE_ENCRYPTED_NAME)
+	/* ... in case we looked up no-key name before key was added */
+	if (fscrypt_is_nokey_name(dentry))
 		return -ENOKEY;
 
 	if (!fscrypt_has_permitted_context(dir, inode))
@@ -84,9 +84,9 @@ int __fscrypt_prepare_rename(struct inode *old_dir, struct dentry *old_dentry,
 	if (err)
 		return err;
 
-	/* ... in case we looked up ciphertext name(s) before key was added */
-	if ((old_dentry->d_flags | new_dentry->d_flags) &
-	    DCACHE_ENCRYPTED_NAME)
+	/* ... in case we looked up no-key name(s) before key was added */
+	if (fscrypt_is_nokey_name(old_dentry) ||
+	    fscrypt_is_nokey_name(new_dentry))
 		return -ENOKEY;
 
 	if (old_dir != new_dir) {
@@ -115,7 +115,7 @@ int __fscrypt_prepare_lookup(struct inode *dir, struct dentry *dentry,
 
 	if (fname->is_ciphertext_name) {
 		spin_lock(&dentry->d_lock);
-		dentry->d_flags |= DCACHE_ENCRYPTED_NAME;
+		dentry->d_flags |= DCACHE_NOKEY_NAME;
 		spin_unlock(&dentry->d_lock);
 	}
 	return err;
@@ -260,7 +260,7 @@ err_free_sd:
 EXPORT_SYMBOL_GPL(__fscrypt_encrypt_symlink);
 
 /**
- * fscrypt_get_symlink - get the target of an encrypted symlink
+ * fscrypt_get_symlink() - get the target of an encrypted symlink
  * @inode: the symlink inode
  * @caddr: the on-disk contents of the symlink
  * @max_size: size of @caddr buffer
