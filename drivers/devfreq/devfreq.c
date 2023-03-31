@@ -1215,7 +1215,7 @@ static ssize_t min_freq_store(struct device *dev, struct device_attribute *attr,
 	unsigned long value;
 	int ret;
 
-	if (likely(task_is_booster(current)))
+	if (task_is_booster())
 		return 0;
 
 	ret = sscanf(buf, "%lu", &value);
