@@ -9388,6 +9388,12 @@ int can_migrate_task(struct task_struct *p, struct lb_env *env)
 		return 0;
 #endif
 
+
+	/* Don't detach task if it doesn't fit on the destination */
+	if (env->flags & LBF_IGNORE_BIG_TASKS &&
+		!task_fits_max(p, env->dst_cpu))
+		return 0;
+
 #ifdef CONFIG_SCHED_SEC_TASK_BOOST
 	/*
 	 * Don't detach low priority task from mid/little cluster to prime cluster
@@ -9405,11 +9411,6 @@ int can_migrate_task(struct task_struct *p, struct lb_env *env)
 	if (env->src_rq->push_task == p)
 		return 0;
 #endif
-
-	/* Don't detach task if it doesn't fit on the destination */
-	if (env->flags & LBF_IGNORE_BIG_TASKS &&
-		!task_fits_max(p, env->dst_cpu))
-		return 0;
 
 	if (task_running(env->src_rq, p)) {
 		schedstat_inc(p->se.statistics.nr_failed_migrations_running);
