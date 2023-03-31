@@ -730,7 +730,7 @@ static ssize_t store_##file_name					\
 	int ret, temp;							\
 	struct cpufreq_policy new_policy;				\
 									\
-	if (likely(task_is_booster(current)))				\
+	if (task_is_booster())						\
 		return count;						\
 									\
 	memcpy(&new_policy, policy, sizeof(*policy));			\
@@ -2369,7 +2369,7 @@ void cpufreq_update_policy(unsigned int cpu)
 	struct cpufreq_policy *policy;
 	struct cpufreq_policy new_policy;
 
-	if (likely(task_is_booster(current)))
+	if (task_is_booster())
 		return;
 
 	policy = cpufreq_cpu_get(cpu);
