@@ -549,6 +549,24 @@ static int sched_colocate_write(struct cgroup_subsys_state *css,
 	st->colocate_update_disabled = true;
 	return 0;
 }
+
+bool schedtune_task_colocated(struct task_struct *p)
+{
+	struct schedtune *st;
+	bool colocated;
+
+	if (unlikely(!schedtune_initialized))
+		return false;
+
+	/* Get task boost value */
+	rcu_read_lock();
+	st = task_schedtune(p);
+	colocated = st->colocate;
+	rcu_read_unlock();
+
+	return colocated;
+}
+
 #endif /* CONFIG_SCHED_WALT */
 
 void schedtune_cancel_attach(struct cgroup_taskset *tset)
