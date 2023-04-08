@@ -2736,9 +2736,6 @@ static int s_show(struct seq_file *m, void *p)
 
 	v = va->vm;
 
-	if (v->flags & VM_LOWMEM)
-		return 0;
-
 	seq_printf(m, "0x%pK-0x%pK %7ld",
 		v->addr, v->addr + v->size, v->size);
 
@@ -2766,9 +2763,6 @@ static int s_show(struct seq_file *m, void *p)
 	if (is_vmalloc_addr(v->pages))
 		seq_puts(m, " vpages");
 
-	if (v->flags & VM_LOWMEM)
-		seq_puts(m, " lowmem");
-
 	show_numa_info(m, v);
 	seq_putc(m, '\n');
 	return 0;
@@ -2781,27 +2775,6 @@ static const struct seq_operations vmalloc_op = {
 	.show = s_show,
 };
 
-static int vmalloc_size_notifier(struct notifier_block *nb,
-					unsigned long action, void *data)
-{
-	struct seq_file *s;
-
-	s = (struct seq_file *)data;
-	if (s != NULL)
-		seq_printf(s, "VmallocAPIsize: %8lu kB\n",
-			   atomic_long_read(&nr_vmalloc_pages)
-				 << (PAGE_SHIFT - 10));
-	else
-		pr_cont("VmallocAPIsize:%lukB ",
-			atomic_long_read(&nr_vmalloc_pages)
-				<< (PAGE_SHIFT - 10));
-	return 0;
-}
-
-static struct notifier_block vmalloc_size_nb = {
-	.notifier_call = vmalloc_size_notifier,
-};
-
 static int __init proc_vmalloc_init(void)
 {
 	if (IS_ENABLED(CONFIG_NUMA))
@@ -2810,8 +2783,6 @@ static int __init proc_vmalloc_init(void)
 				nr_node_ids * sizeof(unsigned int), NULL);
 	else
 		proc_create_seq("vmallocinfo", 0400, NULL, &vmalloc_op);
-	atomic_long_set(&nr_vmalloc_pages, 0);
-	show_mem_extra_notifier_register(&vmalloc_size_nb);
 	return 0;
 }
 module_init(proc_vmalloc_init);
