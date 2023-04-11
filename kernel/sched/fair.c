@@ -7303,6 +7303,9 @@ static int get_start_cpu(struct task_struct *p, bool sync_boost)
 	if (task_skip_min || boosted) {
 		start_cpu = rd->mid_cap_orig_cpu == -1 ?
 			rd->max_cap_orig_cpu : rd->mid_cap_orig_cpu;
+#ifdef CONFIG_WALT_POWER_FEATURE
+		return start_cpu;
+#endif
 	}
 
 	if (task_boost > TASK_BOOST_ON_MID) {
