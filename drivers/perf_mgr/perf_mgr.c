@@ -325,15 +325,15 @@ unsigned long calc_fps_required_util(unsigned long rn_sum, unsigned long dur)
 	if (g_fps == 0 || us_frame_time == 0)
 		return 0;
 
-	required_rate = (us_scale_dur * FP_SCALE) / (us_frame_time - margin);
+	required_rate = (us_scale_dur << 10) / (us_frame_time - margin);
 
-	if (required_rate <= (1 * FP_SCALE))
+	if ((required_rate & FP_SCALE) == 0)
 		return 0;
 	else
-		required_cap =  required_rate * rn_sum / FP_SCALE;
+		required_cap =  (required_rate * rn_sum) >> 10;
 
-	if (required_cap > 1024)
-		required_cap = 1024;
+	if (required_cap > FP_SCALE)
+		required_cap = FP_SCALE;
 
 	return required_cap;
 }
