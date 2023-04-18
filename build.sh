@@ -3,7 +3,7 @@
 export ARCH=arm64
 mkdir out
 
-BUILD_CROSS_COMPILE=aarch64-linux-gnu-
+BUILD_CROSS_COMPILE=/home/pascua14/gcc-arm64/bin/aarch64-elf-
 KERNEL_MAKE_ENV="DTC_EXT=$(pwd)/tools/dtc CONFIG_BUILD_ARM64_DT_OVERLAY=y"
 
 echo "**********************************"
