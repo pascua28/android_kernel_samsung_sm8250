@@ -7,20 +7,17 @@
 
 #include <linux/devfreq_boost.h>
 #include <linux/msm_drm_notify.h>
-#include <linux/input.h>
 #include <linux/kthread.h>
 #include <linux/slab.h>
 #include <uapi/linux/sched/types.h>
 
 enum {
 	SCREEN_OFF,
-	INPUT_BOOST,
 	MAX_BOOST
 };
 
 struct boost_dev {
 	struct devfreq *df;
-	struct delayed_work input_unboost;
 	struct delayed_work max_unboost;
 	wait_queue_head_t boost_waitq;
 	atomic_long_t max_boost_expires;
@@ -33,13 +30,9 @@ struct df_boost_drv {
 	struct notifier_block msm_drm_notif;
 };
 
-static void devfreq_input_unboost(struct work_struct *work);
 static void devfreq_max_unboost(struct work_struct *work);
 
 #define BOOST_DEV_INIT(b, dev, freq) .devices[dev] = {				\
-	.input_unboost =							\
-		__DELAYED_WORK_INITIALIZER((b).devices[dev].input_unboost,	\
-					   devfreq_input_unboost, 0),		\
 	.max_unboost =								\
 		__DELAYED_WORK_INITIALIZER((b).devices[dev].max_unboost,	\
 					   devfreq_max_unboost, 0),		\
@@ -58,10 +51,7 @@ static void __devfreq_boost_kick(struct boost_dev *b)
 	if (!READ_ONCE(b->df) || test_bit(SCREEN_OFF, &b->state))
 		return;
 
-	set_bit(INPUT_BOOST, &b->state);
-	if (!mod_delayed_work(system_unbound_wq, &b->input_unboost,
-		msecs_to_jiffies(CONFIG_DEVFREQ_INPUT_BOOST_DURATION_MS)))
-		wake_up(&b->boost_waitq);
+	wake_up(&b->boost_waitq);
 }
 
 void devfreq_boost_kick(enum df_device device)
@@ -113,15 +103,6 @@ void devfreq_register_boost_device(enum df_device device, struct devfreq *df)
 	WRITE_ONCE(b->df, df);
 }
 
-static void devfreq_input_unboost(struct work_struct *work)
-{
-	struct boost_dev *b = container_of(to_delayed_work(work),
-					   typeof(*b), input_unboost);
-
-	clear_bit(INPUT_BOOST, &b->state);
-	wake_up(&b->boost_waitq);
-}
-
 static void devfreq_max_unboost(struct work_struct *work)
 {
 	struct boost_dev *b = container_of(to_delayed_work(work),
@@ -140,9 +121,7 @@ static void devfreq_update_boosts(struct boost_dev *b, unsigned long state)
 		df->min_freq = df->profile->freq_table[0];
 		df->max_boost = false;
 	} else {
-		df->min_freq = test_bit(INPUT_BOOST, &state) ?
-			       min(b->boost_freq, df->max_freq) :
-			       df->profile->freq_table[0];
+		df->min_freq = df->profile->freq_table[0];
 		df->max_boost = test_bit(MAX_BOOST, &state);
 	}
 	update_devfreq(df);
@@ -206,90 +185,6 @@ static int msm_drm_notifier_cb(struct notifier_block *nb, unsigned long action,
 	return NOTIFY_OK;
 }
 
-static void devfreq_boost_input_event(struct input_handle *handle,
-				      unsigned int type, unsigned int code,
-				      int value)
-{
-	struct df_boost_drv *d = handle->handler->private;
-	int i;
-
-	for (i = 0; i < DEVFREQ_MAX; i++)
-		__devfreq_boost_kick(d->devices + i);
-}
-
-static int devfreq_boost_input_connect(struct input_handler *handler,
-				       struct input_dev *dev,
-				       const struct input_device_id *id)
-{
-	struct input_handle *handle;
-	int ret;
-
-	handle = kzalloc(sizeof(*handle), GFP_KERNEL);
-	if (!handle)
-		return -ENOMEM;
-
-	handle->dev = dev;
-	handle->handler = handler;
-	handle->name = "devfreq_boost_handle";
-
-	ret = input_register_handle(handle);
-	if (ret)
-		goto free_handle;
-
-	ret = input_open_device(handle);
-	if (ret)
-		goto unregister_handle;
-
-	return 0;
-
-unregister_handle:
-	input_unregister_handle(handle);
-free_handle:
-	kfree(handle);
-	return ret;
-}
-
-static void devfreq_boost_input_disconnect(struct input_handle *handle)
-{
-	input_close_device(handle);
-	input_unregister_handle(handle);
-	kfree(handle);
-}
-
-static const struct input_device_id devfreq_boost_ids[] = {
-	/* Multi-touch touchscreen */
-	{
-		.flags = INPUT_DEVICE_ID_MATCH_EVBIT |
-			INPUT_DEVICE_ID_MATCH_ABSBIT,
-		.evbit = { BIT_MASK(EV_ABS) },
-		.absbit = { [BIT_WORD(ABS_MT_POSITION_X)] =
-			BIT_MASK(ABS_MT_POSITION_X) |
-			BIT_MASK(ABS_MT_POSITION_Y) }
-	},
-	/* Touchpad */
-	{
-		.flags = INPUT_DEVICE_ID_MATCH_KEYBIT |
-			INPUT_DEVICE_ID_MATCH_ABSBIT,
-		.keybit = { [BIT_WORD(BTN_TOUCH)] = BIT_MASK(BTN_TOUCH) },
-		.absbit = { [BIT_WORD(ABS_X)] =
-			BIT_MASK(ABS_X) | BIT_MASK(ABS_Y) }
-	},
-	/* Keypad */
-	{
-		.flags = INPUT_DEVICE_ID_MATCH_EVBIT,
-		.evbit = { BIT_MASK(EV_KEY) }
-	},
-	{ }
-};
-
-static struct input_handler devfreq_boost_input_handler = {
-	.event		= devfreq_boost_input_event,
-	.connect	= devfreq_boost_input_connect,
-	.disconnect	= devfreq_boost_input_disconnect,
-	.name		= "devfreq_boost_handler",
-	.id_table	= devfreq_boost_ids
-};
-
 static int __init devfreq_boost_init(void)
 {
 	struct df_boost_drv *d = &df_boost_drv_g;
@@ -309,25 +204,15 @@ static int __init devfreq_boost_init(void)
 		}
 	}
 
-	devfreq_boost_input_handler.private = d;
-	ret = input_register_handler(&devfreq_boost_input_handler);
-	if (ret) {
-		pr_err("Failed to register input handler, err: %d\n", ret);
-		goto stop_kthreads;
-	}
-
 	d->msm_drm_notif.notifier_call = msm_drm_notifier_cb;
 	d->msm_drm_notif.priority = INT_MAX;
 	ret = msm_drm_register_client(&d->msm_drm_notif);
 	if (ret) {
 		pr_err("Failed to register fb notifier, err: %d\n", ret);
-		goto unregister_handler;
 	}
 
 	return 0;
 
-unregister_handler:
-	input_unregister_handler(&devfreq_boost_input_handler);
 stop_kthreads:
 	while (i--)
 		kthread_stop(thread[i]);
