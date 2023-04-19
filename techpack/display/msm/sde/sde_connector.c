@@ -17,6 +17,10 @@
 #include "sde_crtc.h"
 #include "sde_rm.h"
 
+#ifdef CONFIG_EXPOSURE_ADJUSTMENT
+#include "../dsi/exposure_adjustment.h"
+#endif
+
 #if defined(CONFIG_DISPLAY_SAMSUNG)
 #include "ss_dsi_panel_common.h"
 #endif
@@ -785,6 +789,7 @@ int sde_connector_pre_kickoff(struct drm_connector *connector)
 #if defined(CONFIG_DISPLAY_SAMSUNG)
 	struct samsung_display_driver_data *vdd;
 	u32 finger_mask_state;
+	bool ea_enabled_save;
 #endif
 
 	if (!connector) {
@@ -836,6 +841,17 @@ int sde_connector_pre_kickoff(struct drm_connector *connector)
 			vdd->finger_mask_updated = true;
 			vdd->finger_mask = finger_mask_state;
 		}
+
+#ifdef CONFIG_EXPOSURE_ADJUSTMENT
+		if (ea_panel_is_enabled() && finger_mask_state > 0) {
+			ea_panel_mode_ctrl(display->panel, false);
+			ea_enabled_save = true;
+		}
+		if (ea_enabled_save && finger_mask_state == 0) {
+			ea_panel_mode_ctrl(display->panel, true);
+			ea_enabled_save = false;
+		}
+#endif
 	}
 #endif
 
