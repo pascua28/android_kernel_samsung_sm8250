@@ -730,4 +730,6 @@ int dsi_display_ctrl_init(struct dsi_display *display);
 int dsi_display_ctrl_deinit(struct dsi_display *display);
 #endif
 
+struct dsi_display *get_main_display(void);
+
 #endif /* _DSI_DISPLAY_H_ */
