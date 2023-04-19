@@ -945,14 +945,14 @@ error:
 int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 {
 	int rc = 0;
+	int min_lvl = 4;
 	struct dsi_backlight_config *bl = &panel->bl_config;
 
 	if (panel->host_config.ext_bridge_mode)
 		return 0;
 
 #ifdef CONFIG_EXPOSURE_ADJUSTMENT
-	if (bl_lvl > 0)
-		bl_lvl = ea_panel_calc_backlight(bl_lvl);
+	bl_lvl = ea_panel_calc_backlight(bl_lvl < min_lvl ? min_lvl : bl_lvl);
 #endif
 
 	DSI_DEBUG("backlight type:%d lvl:%d\n", bl->type, bl_lvl);
