@@ -482,7 +482,7 @@ static void tcp_v6_err(struct sk_buff *skb, struct inet6_skb_parm *opt,
 			goto out;
 
 		if (mtu < IPV6_MIN_MTU)
-			 goto out;
+			goto out;
 
 		WRITE_ONCE(tp->mtu_info, mtu);
 
