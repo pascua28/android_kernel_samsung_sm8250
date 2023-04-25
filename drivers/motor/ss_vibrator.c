@@ -232,8 +232,6 @@ void vibe_set_freq(struct ss_vib *vib, int set_freq)
 			motor_strength = vib->strength_default;
 	}
 
-	pr_info("[VIB]: %s current temp: %d, motor_strength: %d\n", __func__, vib_get_temperature(), motor_strength);
-
 	g_nlra_gp_clk_d = g_nlra_gp_clk_n / 2;
 	g_nlra_gp_clk_pwm_mul = motor_strength;
 	motor_min_strength = g_nlra_gp_clk_n * MOTOR_MIN_STRENGTH / 100;
@@ -330,7 +328,6 @@ static void set_vibrator(struct ss_vib *vib)
 {
 	int ret;
 
-	pr_info("[VIB]: %s, value[%d]\n", __func__, vib->state);
 	if (vib->state) {
 		wake_lock(&vib_wake_lock);
 		pm_qos_update_request(&pm_qos_req, PM_QOS_NONIDLE_VALUE);
@@ -390,7 +387,6 @@ static void set_vibrator(struct ss_vib *vib)
 		wake_unlock(&vib_wake_lock);
 		pm_qos_update_request(&pm_qos_req, PM_QOS_DEFAULT_VALUE);
 	}
-	pr_info("[VIB]: %s, vibrator control finish value[%d]\n", __func__, vib->state);
 }
 
 static void vibrator_enable(struct ss_vib *vib, int value)
@@ -400,7 +396,6 @@ static void vibrator_enable(struct ss_vib *vib, int value)
 	hrtimer_cancel(&vib->vib_timer);
 
 	if (value == 0) {
-		pr_info("[VIB]: OFF\n");
 		vib->state = 0;
 		vib->timevalue = 0;
 
@@ -421,11 +416,6 @@ static void vibrator_enable(struct ss_vib *vib, int value)
 				vib->intensity = vib->haptic_eng[0].intensity;
 				pr_info("[VIB] packet enabled");
 			}
-			pr_info("[VIB]: ON, Duration : %d msec, intensity : %d, freq : %d strength : %d od : %d\n",
-				vib->timevalue, vib->intensity, vib->freq, motor_strength, vib->f_overdrive_en);
-		} else {
-			pr_info("[VIB]: ON, Duration : %d msec, intensity : %d, strength : %d od : %d\n", 
-				vib->timevalue, vib->intensity, motor_strength, vib->f_overdrive_en);
 		}
 	}
 
@@ -496,8 +486,6 @@ static int ss_vibrator_suspend(struct device *dev)
 {
 	struct ss_vib *vib = dev_get_drvdata(dev);
 
-	pr_info("[VIB]: %s\n", __func__);
-
 	hrtimer_cancel(&vib->vib_timer);
 	cancel_work_sync(&vib->work);
 	/* turn-off vibrator */
@@ -511,7 +499,6 @@ static int ss_vibrator_resume(struct device *dev)
 {
 	struct ss_vib *vib = dev_get_drvdata(dev);
 
-	pr_info("[VIB]: %s\n", __func__);
 	max778xx_haptic_en(vib, true);
 
 	return 0;
@@ -695,10 +682,8 @@ static ssize_t store_vib_tuning(struct device *dev,
 	int temp_m, temp_n, temp_str;
 
 	retval = sscanf(buf, "%1d %3d %2d", &temp_m, &temp_n, &temp_str);
-	if (retval != 3) {
-		pr_info("[VIB]: %s, fail to get vib_tuning value\n", __func__);
+	if (retval != 3)
 		return count;
-	}
 
 	g_nlra_gp_clk_m = temp_m;
 	g_nlra_gp_clk_n = temp_n;
@@ -706,10 +691,6 @@ static ssize_t store_vib_tuning(struct device *dev,
 	g_nlra_gp_clk_pwm_mul = temp_n;
 	motor_strength = temp_str;
 	motor_min_strength = g_nlra_gp_clk_n*MOTOR_MIN_STRENGTH/100;
-
-	pr_info("[VIB]: %s gp_m %d, gp_n %d, gp_d %d, pwm_mul %d, strength %d, min_str %d\n", __func__,
-			g_nlra_gp_clk_m, g_nlra_gp_clk_n, g_nlra_gp_clk_d,
-			g_nlra_gp_clk_pwm_mul, motor_strength, motor_min_strength);
 
 	return count;
 }
@@ -723,15 +704,11 @@ static ssize_t intensity_store(struct device *dev,
 	int ret = 0, set_intensity = 0;
 
 	ret = kstrtoint(buf, 0, &set_intensity);
-	if (ret) {
-		pr_err("[VIB]: %s failed to get intensity", __func__);
+	if (ret)
 		return ret;
-	}
 
-	if ((set_intensity < 0) || (set_intensity > MAX_INTENSITY)) {
-		pr_err("[VIB]: %sout of rage\n", __func__);
+	if ((set_intensity < 0) || (set_intensity > MAX_INTENSITY))
 		return -EINVAL;
-	}
 
 	vibe_set_intensity(set_intensity);
 	vib->intensity = set_intensity;
@@ -756,15 +733,11 @@ static ssize_t force_touch_intensity_store(struct device *dev,
 	int ret = 0, set_intensity = 0;
 
 	ret = kstrtoint(buf, 0, &set_intensity);
-	if (ret) {
-		pr_err("[VIB]: %s failed to get force touch intensity", __func__);
+	if (ret)
 		return ret;
-	}
 
-	if ((set_intensity < 0) || (set_intensity > MAX_INTENSITY)) {
-		pr_err("[VIB]: %sout of rage\n", __func__);
+	if ((set_intensity < 0) || (set_intensity > MAX_INTENSITY))
 		return -EINVAL;
-	}
 
 	vibe_set_intensity(set_intensity);
 	vib->force_touch_intensity = set_intensity;
@@ -789,20 +762,14 @@ static ssize_t multi_freq_store(struct device *dev,
 	int ret = 0, set_freq = 0;
 
 	ret = kstrtoint(buf, 0, &set_freq);
-	if (ret) {
-		pr_err("[VIB]: %s failed to get multi_freq value", __func__);
+	if (ret)
 		return ret;
-	}
 
-	if ((set_freq < 0) || (set_freq >= MAX_FREQUENCY)) {
-		pr_err("[VIB]: %s out of freq range\n", __func__);
+	if ((set_freq < 0) || (set_freq >= MAX_FREQUENCY))
 		return -EINVAL;
-	}
+
 	vibe_set_freq(vib, set_freq);
 
-	pr_info("[VIB]: %s gp_m %d, gp_n %d, gp_d %d, pwm_mul %d, strength %d, min_str %d\n", __func__,
-			g_nlra_gp_clk_m, g_nlra_gp_clk_n, g_nlra_gp_clk_d,
-			g_nlra_gp_clk_pwm_mul, motor_strength, motor_min_strength);
 	return count;
 }
 
@@ -969,16 +936,12 @@ static void regulator_power_onoff(struct ss_vib *vib, int onoff)
 			pr_info("[VIB]: power_on already\n");
 		} else {
 			ret = regulator_set_load(reg_ldo, 10000);
-			if (ret < 0) {
-				pr_info("regulator_set_load failed, rc=%d\n", ret);
+			if (ret < 0)
 				return;
-			}
+
 			ret = regulator_enable(reg_ldo);
-			if (ret) {
-				pr_info("enable ldo failed, rc=%d\n", ret);
+			if (ret)
 				return;
-			}
-			pr_info("[VIB]: power_on now\n");
 		}
 	} else {
 		if (regulator_is_enabled(reg_ldo)) {
@@ -991,9 +954,6 @@ static void regulator_power_onoff(struct ss_vib *vib, int onoff)
 				pr_info("disable ldo failed, rc=%d\n", ret);
 				return;
 			}
-			pr_info("[VIB]: power_off now\n");
-		} else {
-			pr_info("[VIB]: power_off already\n");
 		}
 	}
 }
