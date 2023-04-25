@@ -1724,14 +1724,6 @@ static u8 fts_event_handler_type_b(struct fts_ts_info *info)
 	}
 
 	do {
-		/* for event debugging */
-		if (info->debug_string & 0x1)
-			input_info(true, &info->client->dev, "[%d] %02X %02X %02X %02X %02X %02X %02X %02X\n",
-					EventNum, data[EventNum * FTS_EVENT_SIZE+0], data[EventNum * FTS_EVENT_SIZE+1],
-					data[EventNum * FTS_EVENT_SIZE+2], data[EventNum * FTS_EVENT_SIZE+3],
-					data[EventNum * FTS_EVENT_SIZE+4], data[EventNum * FTS_EVENT_SIZE+5],
-					data[EventNum * FTS_EVENT_SIZE+6], data[EventNum * FTS_EVENT_SIZE+7]);
-
 		event_buff = (u8 *) &data[EventNum * FTS_EVENT_SIZE];
 		event_id = event_buff[0] & 0x3;
 
@@ -1739,43 +1731,24 @@ static u8 fts_event_handler_type_b(struct fts_ts_info *info)
 		case FTS_STATUS_EVENT:
 			p_event_status = (struct fts_event_status *)event_buff;
 
-			if (p_event_status->stype > 0)
-				input_info(true, &info->client->dev, "%s: STATUS %02X %02X %02X %02X %02X %02X %02X %02X\n",
-						__func__, event_buff[0], event_buff[1], event_buff[2],
-						event_buff[3], event_buff[4], event_buff[5],
-						event_buff[6], event_buff[7]);
-
 			if ((p_event_status->stype == FTS_EVENT_STATUSTYPE_ERROR) &&
 					(p_event_status->status_id == FTS_ERR_EVENT_QUEUE_FULL)) {
-				input_err(true, &info->client->dev, "%s: IC Event Queue is full\n", __func__);
 				fts_release_all_finger(info);
 			}
 
 			if ((p_event_status->stype == FTS_EVENT_STATUSTYPE_ERROR) &&
 					(p_event_status->status_id == FTS_ERR_EVENT_ESD)) {
-				input_err(true, &info->client->dev, "%s: ESD detected. run reset\n", __func__);
 				if (!info->reset_is_on_going)
 					schedule_delayed_work(&info->reset_work, msecs_to_jiffies(10));
 			}
 
 			if ((p_event_status->stype == FTS_EVENT_STATUSTYPE_INFORMATION) &&
 					(p_event_status->status_id == FTS_INFO_READY_STATUS)) {
-				if (p_event_status->status_data_1 == 0x10) {
-					input_err(true, &info->client->dev, "%s: IC Reset\n", __func__);
-/*
-					if (!info->reset_is_on_going)
-						schedule_delayed_work(&info->reset_work, msecs_to_jiffies(10));
-*/
-				}
 			}
 
 			if ((p_event_status->stype == FTS_EVENT_STATUSTYPE_INFORMATION) &&
 					(p_event_status->status_id == FTS_INFO_WET_MODE)) {
 				info->wet_mode = p_event_status->status_data_1;
-
-				input_info(true, &info->client->dev, "%s: WET MODE %s[%d]\n",
-						__func__, info->wet_mode == 0 ? "OFF" : "ON",
-						p_event_status->status_data_1);
 
 				if (info->wet_mode)
 					info->wet_count++;
@@ -1786,10 +1759,6 @@ static u8 fts_event_handler_type_b(struct fts_ts_info *info)
 				info->touch_noise_status = (p_event_status->status_data_1 >> 4);
 				info->touch_noise_reason = (p_event_status->status_data_1 & 0x0F);
 
-				input_info(true, &info->client->dev, "%s: NOISE MODE %s[%02X]\n",
-						__func__, info->touch_noise_status == 0 ? "OFF" : "ON",
-						p_event_status->status_data_1);
-
 				if (info->touch_noise_status)
 					info->noise_count++;
 			}
@@ -1799,9 +1768,6 @@ static u8 fts_event_handler_type_b(struct fts_ts_info *info)
 				info->xenosensor_detect = (p_event_status->status_data_5 & 0x80);
 				info->xenosensor_x = (p_event_status->status_data_1 << 4) | ((p_event_status->status_data_3 & 0xf0) >> 4);
 				info->xenosensor_y = (p_event_status->status_data_2 << 4) | (p_event_status->status_data_3 & 0x0f);
-
-				input_info(true, &info->client->dev, "%s: XENOSENSOR DETECT [%d] (%d,%d)\n",
-					__func__, info->xenosensor_detect, info->xenosensor_x, info->xenosensor_y);
 			}
 
 			if (p_event_status->stype == FTS_EVENT_STATUSTYPE_VENDORINFO) {
@@ -1810,7 +1776,6 @@ static u8 fts_event_handler_type_b(struct fts_ts_info *info)
 						info->hover_event = p_event_status->status_data_1;
 						input_report_abs(info->input_dev_proximity, ABS_MT_CUSTOM, p_event_status->status_data_1);
 						input_sync(info->input_dev_proximity);
-						input_info(true, &info->client->dev, "%s: proximity: %d\n", __func__, p_event_status->status_data_1);
 					}
 				}
 			}
@@ -1818,7 +1783,6 @@ static u8 fts_event_handler_type_b(struct fts_ts_info *info)
 
 		case FTS_COORDINATE_EVENT:
 			if (info->fts_power_state < FTS_POWER_STATE_ACTIVE) {
-				input_info(true, &info->client->dev, "%s: opmode is not normal\n", __func__);
 				break;
 			}
 
@@ -1826,9 +1790,6 @@ static u8 fts_event_handler_type_b(struct fts_ts_info *info)
 
 			TouchID = p_event_coord->tid;
 			if (TouchID >= FINGER_MAX) {
-				input_err(true, &info->client->dev,
-						"%s: tid(%d) is out of supported max finger number\n",
-						__func__, TouchID);
 				break;
 			}
 
@@ -1889,31 +1850,6 @@ static u8 fts_event_handler_type_b(struct fts_ts_info *info)
 						info->check_multi = 0;
 						info->print_info_cnt_release = 0;
 					}
-
-#if !defined(CONFIG_SAMSUNG_PRODUCT_SHIP)
-					input_info(true, &info->client->dev,
-							"[R] tID:%d loc:%s dd:%d,%d mc:%d tc:%d lx:%d ly:%d mx:%d my:%d p:%d nlvl:%d maxS:%d hid:%d\n",
-							TouchID, location,
-							info->finger[TouchID].x - info->finger[TouchID].p_x,
-							info->finger[TouchID].y - info->finger[TouchID].p_y,
-							info->finger[TouchID].mcount, info->touch_count,
-							info->finger[TouchID].x, info->finger[TouchID].y,
-							info->finger[TouchID].max_energy_x, info->finger[TouchID].max_energy_y,
-							info->finger[TouchID].palm_count, info->finger[TouchID].noise_level,
-							info->finger[TouchID].max_strength, info->finger[TouchID].hover_id_num);
-#else
-					input_info(true, &info->client->dev,
-							"[R] tID:%d loc:%s dd:%d,%d mp:%d,%d mc:%d tc:%d p:%d nlvl:%d maxS:%d hid:%d\n",
-							TouchID, location,
-							info->finger[TouchID].x - info->finger[TouchID].p_x,
-							info->finger[TouchID].y - info->finger[TouchID].p_y,
-							info->finger[TouchID].max_energy_x - info->finger[TouchID].p_x,
-							info->finger[TouchID].max_energy_y - info->finger[TouchID].p_y,
-							info->finger[TouchID].mcount, info->touch_count,
-							info->finger[TouchID].palm_count, info->finger[TouchID].noise_level,
-							info->finger[TouchID].max_strength, info->finger[TouchID].hover_id_num);
-#endif
-
 					info->finger[TouchID].action = FTS_COORDINATE_ACTION_NONE;
 					info->finger[TouchID].mcount = 0;
 					info->finger[TouchID].palm_count = 0;
@@ -1961,37 +1897,13 @@ static u8 fts_event_handler_type_b(struct fts_ts_info *info)
 						info->multi_count++;
 					}
 
-#if !defined(CONFIG_SAMSUNG_PRODUCT_SHIP)
-					input_info(true, &info->client->dev,
-							"[P] tID:%d.%d x:%d y:%d z:%d major:%d minor:%d loc:%s tc:%d type:%d p:%d nlvl:%d maxS:%d hid:%d\n",
-							TouchID, (info->input_dev->mt->trkid - 1) & TRKID_MAX,
-							info->finger[TouchID].x, info->finger[TouchID].y,
-							info->finger[TouchID].z,
-							info->finger[TouchID].major, info->finger[TouchID].minor,
-							location, info->touch_count, info->finger[TouchID].ttype,
-							info->finger[TouchID].palm_count, info->finger[TouchID].noise_level,
-							info->finger[TouchID].max_strength, info->finger[TouchID].hover_id_num);
-#else
-					input_info(true, &info->client->dev,
-							"[P] tID:%d.%d z:%d major:%d minor:%d loc:%s tc:%d type:%d p:%d nlvl:%d maxS:%d hid:%d\n",
-							TouchID, (info->input_dev->mt->trkid - 1) & TRKID_MAX,
-							info->finger[TouchID].z,
-							info->finger[TouchID].major, info->finger[TouchID].minor,
-							location, info->touch_count, info->finger[TouchID].ttype,
-							info->finger[TouchID].palm_count, info->finger[TouchID].noise_level,
-							info->finger[TouchID].max_strength, info->finger[TouchID].hover_id_num);
-#endif
 				} else if (info->finger[TouchID].action == FTS_COORDINATE_ACTION_MOVE) {
 					if (info->touch_count == 0) {
-						input_err(true, &info->client->dev, "%s: touch count 0\n", __func__);
 						fts_release_all_finger(info);
 						break;
 					}
 
 					if (prev_action == FTS_COORDINATE_ACTION_NONE) {
-						input_err(true, &info->client->dev,
-								"%s: previous state is released but point is moved\n",
-								__func__);
 						break;
 					}
 
@@ -2023,41 +1935,18 @@ static u8 fts_event_handler_type_b(struct fts_ts_info *info)
 									info->finger[TouchID].z);
 
 					info->finger[TouchID].mcount++;
-				} else {
-					input_dbg(true, &info->client->dev,
-							"%s: do not support coordinate action(%d)\n",
-							__func__, info->finger[TouchID].action);
 				}
-
-
-				if (info->finger[TouchID].ttype != info->finger[TouchID].prev_ttype) {
-					input_info(true, &info->client->dev, "%s: tID:%d ttype(%c->%c) : %s\n",
-							__func__, info->finger[TouchID].id,
-							finger_mode[info->finger[TouchID].prev_ttype],
-							finger_mode[info->finger[TouchID].ttype],
-							info->finger[TouchID].action == FTS_COORDINATE_ACTION_PRESS ? "P" :
-							info->finger[TouchID].action == FTS_COORDINATE_ACTION_MOVE ? "M" : "R");
-				}
-			} else {
-				input_dbg(true, &info->client->dev,
-						"%s: do not support coordinate type(%d)\n",
-						__func__, info->finger[TouchID].ttype);
 			}
 
 			break;
 		case FTS_GESTURE_EVENT:
 			p_gesture_status = (struct fts_gesture_status *)event_buff;
-			input_info(true, &info->client->dev, "%s: [GESTURE] type:%X sf:%X id:%X | %X, %X, %X, %X\n",
-				__func__, p_gesture_status->stype, p_gesture_status->sf, p_gesture_status->gesture_id,
-				p_gesture_status->gesture_data_1, p_gesture_status->gesture_data_2,
-				p_gesture_status->gesture_data_3, p_gesture_status->gesture_data_4);
 
 #ifdef FTS_SUPPORT_SPONGELIB
 			if (p_gesture_status->sf == FTS_GESTURE_SAMSUNG_FEATURE) {
 				switch (p_gesture_status->stype) {
 				case FTS_SPONGE_EVENT_SWIPE_UP:
 					info->scrub_id = SPONGE_EVENT_TYPE_SPAY;
-					input_info(true, &info->client->dev, "%s: SPAY\n", __func__);
 					input_report_key(info->input_dev, KEY_BLACK_UI_GESTURE, 1);
 					input_sync(info->input_dev);
 					input_report_key(info->input_dev, KEY_BLACK_UI_GESTURE, 0);
@@ -2068,7 +1957,6 @@ static u8 fts_event_handler_type_b(struct fts_ts_info *info)
 						info->scrub_x = (p_gesture_status->gesture_data_1 << 4) | (p_gesture_status->gesture_data_3 >> 4);
 						info->scrub_y = (p_gesture_status->gesture_data_2 << 4) | (p_gesture_status->gesture_data_3 & 0x0F);
 
-						input_info(true, &info->client->dev, "%s: AOD\n", __func__);
 						input_report_key(info->input_dev, KEY_BLACK_UI_GESTURE, 1);
 						input_sync(info->input_dev);
 						input_report_key(info->input_dev, KEY_BLACK_UI_GESTURE, 0);
@@ -2076,7 +1964,6 @@ static u8 fts_event_handler_type_b(struct fts_ts_info *info)
 						input_report_key(info->input_dev, KEY_WAKEUP, 1);
 						input_sync(info->input_dev);
 						input_report_key(info->input_dev, KEY_WAKEUP, 0);
-						input_info(true, &info->client->dev, "%s: DOUBLE TAP TO WAKEUP\n", __func__);
 					}
 					break;
 				case FTS_SPONGE_EVENT_SINGLETAP:
@@ -2084,7 +1971,6 @@ static u8 fts_event_handler_type_b(struct fts_ts_info *info)
 					info->scrub_x = (p_gesture_status->gesture_data_1 << 4) | (p_gesture_status->gesture_data_3 >> 4);
 					info->scrub_y = (p_gesture_status->gesture_data_2 << 4) | (p_gesture_status->gesture_data_3 & 0x0F);
 
-					input_info(true, &info->client->dev, "%s: SINGLE TAP\n", __func__);
 					input_report_key(info->input_dev, KEY_BLACK_UI_GESTURE, 1);
 					input_sync(info->input_dev);
 					input_report_key(info->input_dev, KEY_BLACK_UI_GESTURE, 0);
@@ -2108,31 +1994,18 @@ static u8 fts_event_handler_type_b(struct fts_ts_info *info)
 					if (p_gesture_status->gesture_id == FTS_SPONGE_EVENT_GESTURE_ID_FOD_LONG ||
 							p_gesture_status->gesture_id == FTS_SPONGE_EVENT_GESTURE_ID_FOD_NORMAL) {
 						info->scrub_id = SPONGE_EVENT_TYPE_FOD;
-						input_info(true, &info->client->dev, "%s: FOD %sPRESS\n",
-								__func__, p_gesture_status->gesture_id ? "" : "LONG");
 					} else if (p_gesture_status->gesture_id == FTS_SPONGE_EVENT_GESTURE_ID_FOD_RELEASE) {
 						info->scrub_id = SPONGE_EVENT_TYPE_FOD_RELEASE;
-						input_info(true, &info->client->dev, "%s: FOD RELEASE\n", __func__);
 					} else if (p_gesture_status->gesture_id == FTS_SPONGE_EVENT_GESTURE_ID_FOD_OUT) {
 						info->scrub_id = SPONGE_EVENT_TYPE_FOD_OUT;
-						input_info(true, &info->client->dev, "%s: FOD OUT\n", __func__);
 					} else if (p_gesture_status->gesture_id == FTS_SPONGE_EVENT_GESTURE_ID_FOD_VI) {
 						if (info->lowpower_flag & FTS_MODE_PRESS) {
 							int ret;
 
 							ret = fts_read_from_sponge(info, FTS_CMD_SPONGE_FOD_POSITION, info->fod_vi_data, info->fod_vi_size);
-							if (ret < 0) {
-								input_info(true, &info->client->dev, "%s: failed to read FOD VI: ret: %d\n", __func__, ret);
-							} else {
-								input_info(true, &info->client->dev, "%s: FOD VI\n", __func__);
-							}
-						} else {
-							input_info(true, &info->client->dev, "%s: FOD not enabled: 0x%X\n", __func__, info->lowpower_flag);
 						}
 						break;
 					} else {
-						input_info(true, &info->client->dev, "%s: invalid id %d\n",
-								__func__, p_gesture_status->gesture_id);
 						break;
 					}
 					input_report_key(info->input_dev, KEY_BLACK_UI_GESTURE, 1);
@@ -2144,26 +2017,8 @@ static u8 fts_event_handler_type_b(struct fts_ts_info *info)
 #endif
 			break;
 		case FTS_VENDOR_EVENT: // just print message for debugging
-			if (event_buff[1] == 0x01) {  // echo event
-				input_info(true, &info->client->dev,
-						"%s: echo event %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X\n",
-						__func__, event_buff[0], event_buff[1], event_buff[2], event_buff[3], event_buff[4], event_buff[5],
-						event_buff[6], event_buff[7], event_buff[8], event_buff[9], event_buff[10], event_buff[11],
-						event_buff[12], event_buff[13], event_buff[14], event_buff[15]);
-			} else {
-				input_info(true, &info->client->dev,
-						"%s: %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X\n",
-						__func__, event_buff[0], event_buff[1], event_buff[2], event_buff[3], event_buff[4], event_buff[5],
-						event_buff[6], event_buff[7], event_buff[8], event_buff[9], event_buff[10], event_buff[11],
-						event_buff[12], event_buff[13], event_buff[14], event_buff[15]);
-			}
 			break;
 		default:
-			input_info(true, &info->client->dev,
-					"%s: unknown event %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X\n",
-						__func__, event_buff[0], event_buff[1], event_buff[2], event_buff[3], event_buff[4], event_buff[5],
-						event_buff[6], event_buff[7], event_buff[8], event_buff[9], event_buff[10], event_buff[11],
-						event_buff[12], event_buff[13], event_buff[14], event_buff[15]);
 			break;
 		}
 
@@ -2176,7 +2031,6 @@ static u8 fts_event_handler_type_b(struct fts_ts_info *info)
 	if (info->touch_count == 0 && info->tsp_temp_data_skip) {
 		info->tsp_temp_data_skip = false;
 		fts_set_temp(info, false);
-		input_err(true, &info->client->dev, "%s: fts_set_temp, no touch\n", __func__);
 	}
 
 //	fts_lfd_ctrl(info, info->touch_count);
@@ -2261,8 +2115,6 @@ static irqreturn_t fts_interrupt_handler(int irq, void *handle)
 
 	/* in LPM, waiting blsp block resume */
 	if (info->fts_power_state == FTS_POWER_STATE_LOWPOWER) {
-		input_dbg(true, &info->client->dev, "%s: run LPM interrupt handler\n", __func__);
-
 		wake_lock_timeout(&info->wakelock, msecs_to_jiffies(500));
 		/* waiting for blsp block resuming, if not occurs i2c error */
 		ret = wait_for_completion_interruptible_timeout(&info->resume_done, msecs_to_jiffies(500));
@@ -2275,9 +2127,6 @@ static irqreturn_t fts_interrupt_handler(int irq, void *handle)
 			input_err(true, &info->client->dev, "%s: LPM: -ERESTARTSYS if interrupted, %d\n", __func__, ret);
 			return IRQ_NONE;
 		}
-
-		input_info(true, &info->client->dev, "%s: run LPM interrupt handler, %d\n", __func__, jiffies_to_msecs(ret));
-		/* run lpm interrupt handler */
 	}
 
 	mutex_lock(&info->eventlock);

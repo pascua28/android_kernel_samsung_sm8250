@@ -397,7 +397,6 @@ static ssize_t sec_cmd_store(struct device *dev, struct device_attribute *devatt
 
 	if (kfifo_avail(&data->cmd_queue) && (queue_size < SEC_CMD_MAX_QUEUE)) {
 		kfifo_in(&data->cmd_queue, &cmd, sizeof(struct command));
-		pr_info("%s: %s %s: push cmd: %s\n", dev_name(data->fac_dev), SECLOG, __func__, cmd.cmd);
 	} else {
 		pr_err("%s: %s %s: cmd_queue is full!!\n", dev_name(data->fac_dev), SECLOG, __func__);
 
