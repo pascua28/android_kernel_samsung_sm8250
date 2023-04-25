@@ -68,10 +68,6 @@
 #include "xfrm.h"
 #include "ebitmap.h"
 #include "audit.h"
-#ifdef CONFIG_KDP_CRED
-#include <linux/uh.h>
-#include <linux/kdp.h>
-#endif
 
 /* Policy capability names */
 const char *selinux_policycap_names[__POLICYDB_CAPABILITY_MAX] = {
@@ -84,9 +80,6 @@ const char *selinux_policycap_names[__POLICYDB_CAPABILITY_MAX] = {
 };
 
 static struct selinux_ss selinux_ss;
-#if (defined CONFIG_KDP_CRED && defined CONFIG_SAMSUNG_PRODUCT_SHIP)
-int ss_initialized __kdp_ro; // SEC_SELINUX_PORTING_COMMON Change to use RKP
-#endif
 
 void selinux_ss_init(struct selinux_ss **ss)
 {
@@ -760,7 +753,6 @@ out:
 
 	if (!enforcing_enabled(state))
 		return 0;
-// ] SEC_SELINUX_PORTING_COMMON
 	return -EPERM;
 }
 
@@ -1654,9 +1646,8 @@ out:
 	kfree(n);
 #endif
 
-	if (enforcing_enabled(state))
+	if (!enforcing_enabled(state))
 		return 0;
-// ] SEC_SELINUX_PORTING_COMMON
 	return -EACCES;
 }
 
@@ -1955,9 +1946,8 @@ static inline int convert_context_handle_invalid_context(
 	u32 len;
 #endif
 
-	if (!enforcing_enabled(state))
+	if (enforcing_enabled(state))
 		return -EINVAL;
-// ] SEC_SELINUX_PORTING_COMMON
 
 #ifdef CONFIG_AUDIT
 	if (!context_struct_to_string(policydb, context, &s, &len)) {
@@ -2209,9 +2199,6 @@ int security_load_policy(struct selinux_state *state, void *data, size_t len)
 		state->ss->sidtab = newsidtab;
 		security_load_policycaps(state);
 		state->initialized = 1;
-#if (defined CONFIG_KDP_CRED && defined CONFIG_SAMSUNG_PRODUCT_SHIP)
-		uh_call(UH_APP_RKP, RKP_KDP_X60, (u64)&ss_initialized, 1, 0, 0);
-#endif
 		seqno = ++state->ss->latest_granting;
 		selinux_complete_init();
 		avc_ss_reset(state->avc, seqno);
@@ -3052,7 +3039,7 @@ int security_sid_mls_copy(struct selinux_state *state,
 #endif
 
 	rc = 0;
-	if (!state->initialized || !policydb->mls_enabled) {// SEC_SELINUX_PORTING_COMMON Change to use RKP 
+	if (!state->initialized || !policydb->mls_enabled) {
 		*new_sid = sid;
 		goto out;
 	}
