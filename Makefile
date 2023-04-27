@@ -725,9 +725,6 @@ KBUILD_CFLAGS	+= $(call cc-disable-warning, address)
 
 ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
 KBUILD_CFLAGS	+= -Os $(call cc-disable-warning,maybe-uninitialized,)
-ifeq ($(cc-name),gcc)
-KBUILD_CFLAGS	+= --param=max-inline-insns-auto=1000
-endif
 else
 ifdef CONFIG_PROFILE_ALL_BRANCHES
 KBUILD_CFLAGS	+= -O2 $(call cc-disable-warning,maybe-uninitialized,)
