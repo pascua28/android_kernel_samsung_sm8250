@@ -81,8 +81,6 @@
 #define TDM_CHANNEL_MAX		8
 #define DEV_NAME_STR_LEN	32
 
-#define MSM_LL_QOS_VALUE	300 /* time in us to ensure LPM doesn't go in C3/C4 */
-
 #define ADSP_STATE_READY_TIMEOUT_MS 3000
 
 #define WSA8810_NAME_1 "wsa881x.20170211"
