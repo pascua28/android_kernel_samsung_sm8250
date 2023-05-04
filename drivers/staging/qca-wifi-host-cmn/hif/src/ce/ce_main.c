@@ -2788,10 +2788,12 @@ void hif_ce_stop(struct hif_softc *scn)
 	 * up Host-side state.
 	 */
 
+#ifdef CONFIG_ATH_PROCFS_DIAG_SUPPORT
 	if (scn->athdiag_procfs_inited) {
 		athdiag_procfs_remove();
 		scn->athdiag_procfs_inited = false;
 	}
+#endif
 
 	hif_buffer_cleanup(hif_state);
 
@@ -3371,10 +3373,13 @@ void hif_unconfig_ce(struct hif_softc *hif_sc)
 			qdf_spinlock_destroy(&pipe_info->recv_bufs_needed_lock);
 		}
 	}
+
+#ifdef CONFIG_ATH_PROCFS_DIAG_SUPPORT
 	if (hif_sc->athdiag_procfs_inited) {
 		athdiag_procfs_remove();
 		hif_sc->athdiag_procfs_inited = false;
 	}
+#endif
 }
 
 #ifdef CONFIG_BYPASS_QMI
@@ -3609,11 +3614,13 @@ int hif_config_ce(struct hif_softc *scn)
 		ce_register_irq(hif_state, (1 << pipe_num));
 	}
 
+#ifdef CONFIG_ATH_PROCFS_DIAG_SUPPORT
 	if (athdiag_procfs_init(scn) != 0) {
 		A_TARGET_ACCESS_UNLIKELY(scn);
 		goto err;
 	}
 	scn->athdiag_procfs_inited = true;
+#endif
 
 	HIF_DBG("%s: ce_init done", __func__);
 
