@@ -1,11 +1,62 @@
 #!/bin/bash
 
-export ARCH=arm64
 mkdir out
 
-BUILD_CROSS_COMPILE=aarch64-linux-gnu-
-BUILD_CROSS_COMPILE_COMPAT=arm-linux-gnueabihf-
+GCC_ENV="CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_COMPAT=arm-linux-gnueabihf-"
+
+LLVM=/home/pascua14/llvm-16/bin/
+
+LLVM_ENV="CROSS_COMPILE=$(echo $LLVM)aarch64-linux-gnu- CROSS_COMPILE_COMPAT=$(echo $LLVM)arm-linux-gnueabi- CLANG_DIR=$LLVM LLVM=1 LLVM_IAS=1"
+
 KERNEL_MAKE_ENV="DTC_EXT=$(pwd)/tools/dtc CONFIG_BUILD_ARM64_DT_OVERLAY=y"
+
+echo "**********************************"
+echo "Select compiler"
+echo "(1) GCC"
+echo "(2) LLVM"
+read -p "Selected compiler: " compiler
+
+if [ $compiler == "1" ]; then
+	COMPILER_ENV=$GCC_ENV
+
+	echo "
+
+################# Compiling with GCC #################
+
+"
+
+	case $1 in
+	lto)
+	    echo "
+
+################# Compiling GCC LTO build #################
+
+"
+	    scripts/configcleaner "
+CONFIG_LTO_GCC
+CONFIG_HAVE_ARCH_PREL32_RELOCATIONS
+"
+	    echo "CONFIG_LTO_GCC=y
+" >> out/.config
+	;;
+
+	   *)
+	    echo "# CONFIG_LTO_GCC is not set
+CONFIG_HAVE_ARCH_PREL32_RELOCATIONS=y
+" >> out/.config
+	   ;;
+	esac
+
+elif [ $compiler == "2" ]; then
+    COMPILER_ENV=$LLVM_ENV
+
+echo "
+
+################# Compiling with LLVM #################
+
+"
+
+fi
 
 echo "**********************************"
 echo "Select load-tracking variant"
@@ -13,7 +64,7 @@ echo "(1) WALT"
 echo "(2) PELT"
 read -p "Selected variant: " variant
 
-make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 CROSS_COMPILE=$BUILD_CROSS_COMPILE CROSS_COMPILE_COMPAT=$BUILD_CROSS_COMPILE_COMPAT \
+make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 $COMPILER_ENV \
 	r8q_defconfig > /dev/null 2>&1
 
 if [ $variant == "1" ]; then
@@ -39,37 +90,14 @@ CONFIG_PERF_MGR
 
 fi
 
-    scripts/configcleaner "
-CONFIG_LTO_GCC
-CONFIG_HAVE_ARCH_PREL32_RELOCATIONS
-"
-
-case $1 in
-   lto)
-    echo "
-
-################# Compiling LTO build #################
-
-"
-    echo "CONFIG_LTO_GCC=y
-" >> out/.config
-   ;;
-
-   *)
-    echo "# CONFIG_LTO_GCC is not set
-CONFIG_HAVE_ARCH_PREL32_RELOCATIONS=y
-" >> out/.config
-   ;;
-esac
-
-make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 CROSS_COMPILE=$BUILD_CROSS_COMPILE CROSS_COMPILE_COMPAT=$BUILD_CROSS_COMPILE_COMPAT \
+make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 $COMPILER_ENV \
 	oldconfig
 
 DATE_START=$(date +"%s")
 
-make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 CROSS_COMPILE=$BUILD_CROSS_COMPILE CROSS_COMPILE_COMPAT=$BUILD_CROSS_COMPILE_COMPAT
+make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 $COMPILER_ENV
 
-make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 CROSS_COMPILE=$BUILD_CROSS_COMPILE CROSS_COMPILE_COMPAT=$BUILD_CROSS_COMPILE_COMPAT dtbs
+make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 $COMPILER_ENV dtbs
 
 IMAGE="out/arch/arm64/boot/Image.gz"
 DTB_OUT="out/arch/arm64/boot/dts/vendor/qcom"
@@ -78,7 +106,7 @@ cat $DTB_OUT/*.dtb > AnyKernel3/kona.dtb
 
 patch -p1 --merge < patches/freqtable.diff
 
-make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 CROSS_COMPILE=$BUILD_CROSS_COMPILE CROSS_COMPILE_COMPAT=$BUILD_CROSS_COMPILE_COMPAT dtbs
+make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 $COMPILER_ENV dtbs
 
 cat $DTB_OUT/*.dtb > AnyKernel3/kona-perf.dtb
 
