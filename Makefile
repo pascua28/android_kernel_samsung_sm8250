@@ -733,11 +733,6 @@ ifdef CONFIG_PROFILE_ALL_BRANCHES
 KBUILD_CFLAGS	+= -O2 $(call cc-disable-warning,maybe-uninitialized,)
 else
 KBUILD_CFLAGS   += -O2
-ifeq ($(CONFIG_LTO_CLANG),y)
-ifeq ($(CONFIG_LD_IS_LLD), y)
-LDFLAGS += --lto-O2
-endif
-endif
 endif
 endif
 
