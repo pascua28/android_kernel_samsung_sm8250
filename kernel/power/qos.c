@@ -46,6 +46,7 @@
 #include <linux/irq.h>
 #include <linux/irqdesc.h>
 #include <linux/cpumask.h>
+#include <linux/cpuidle.h>
 
 #include <linux/uaccess.h>
 #include <linux/export.h>
@@ -332,7 +333,8 @@ static inline int pm_qos_set_value_for_cpus(struct pm_qos_request *new_req,
 		for_each_cpu(cpu, to_cpumask(&affected_cpus)) {
 			if (c->target_per_cpu[cpu] != req->node.prio) {
 				c->target_per_cpu[cpu] = req->node.prio;
-				*cpus |= BIT(cpu);
+				if (cpus)
+					*cpus |= BIT(cpu);
 			}
 		}
 
@@ -343,7 +345,8 @@ static inline int pm_qos_set_value_for_cpus(struct pm_qos_request *new_req,
 	for_each_cpu(cpu, to_cpumask(&new_req_cpus)) {
 		if (c->target_per_cpu[cpu] != PM_QOS_CPU_DMA_LAT_DEFAULT_VALUE) {
 			c->target_per_cpu[cpu] = PM_QOS_CPU_DMA_LAT_DEFAULT_VALUE;
-			*cpus |= BIT(cpu);
+			if (cpus)
+				*cpus |= BIT(cpu);
 		}
 	}
 
