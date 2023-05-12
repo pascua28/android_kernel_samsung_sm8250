@@ -141,5 +141,7 @@ out/
 *.gz
 *.pyc
 *.out
+*.profraw
+*.profdata
 dtb
 zImage
