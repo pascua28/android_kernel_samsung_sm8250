@@ -20,17 +20,13 @@ if [ $compiler == "1" ]; then
 	COMPILER_ENV=$GCC_ENV
 
 	echo "
-
 ################# Compiling with GCC #################
-
 "
 
 	case $1 in
 	lto)
 	    echo "
-
 ################# Compiling GCC LTO build #################
-
 "
 	    scripts/configcleaner "
 CONFIG_LTO_GCC
@@ -48,14 +44,22 @@ CONFIG_HAVE_ARCH_PREL32_RELOCATIONS=y
 	esac
 
 elif [ $compiler == "2" ]; then
-    COMPILER_ENV=$LLVM_ENV
+	COMPILER_ENV=$LLVM_ENV
 
 echo "
-
 ################# Compiling with LLVM #################
-
 "
 
+	case $1 in
+	pgo)
+	   echo "
+################# Compiling with Clang PGO #################
+"
+
+	   KERNEL_MAKE_ENV="$KERNEL_MAKE_ENV CONFIG_PGO_CLANG=y"
+
+	;;
+	esac
 fi
 
 echo "**********************************"
