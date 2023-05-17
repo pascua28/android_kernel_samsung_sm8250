@@ -995,9 +995,7 @@ endif
 ifeq ($(CONFIG_PGO_CLANG), y)
 CLANG_PROFDATA	:= $(srctree)/vmlinux.profdata
 
-KBUILD_CFLAGS	+= -fprofile-use=$(CLANG_PROFDATA) \
-			-Wno-profile-instr-unprofiled \
-			-Wno-profile-instr-out-of-date
+KBUILD_CFLAGS	+= -fprofile-use=$(CLANG_PROFDATA)
 endif
 
 # arch Makefile may override CC so keep this after arch Makefile is included
