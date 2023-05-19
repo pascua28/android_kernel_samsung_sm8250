@@ -359,8 +359,8 @@ HOST_LFS_LDFLAGS := $(shell getconf LFS_LDFLAGS 2>/dev/null)
 HOST_LFS_LIBS := $(shell getconf LFS_LIBS 2>/dev/null)
 
 ifneq ($(LLVM),)
-HOSTCC	= $(CLANG_DIR)clang
-HOSTCXX	= $(CLANG_DIR)clang++
+HOSTCC	= clang
+HOSTCXX	= clang++
 else
 HOSTCC	= gcc
 HOSTCXX	= g++
