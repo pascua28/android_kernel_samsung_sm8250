@@ -6,7 +6,7 @@ GCC_ENV="CROSS_COMPILE=aarch64-linux-gnu-"
 
 LLVM=/home/pascua14/llvm-16/bin/
 
-LLVM_ENV="CROSS_COMPILE=$(echo $LLVM)aarch64-linux-gnu- CROSS_COMPILE_COMPAT=$(echo $LLVM)arm-linux-gnueabi- CLANG_DIR=$LLVM LLVM=1 LLVM_IAS=1"
+LLVM_ENV="CROSS_COMPILE=$(echo $LLVM)aarch64-linux-gnu- CLANG_DIR=$LLVM LLVM=1 LLVM_IAS=1"
 
 KERNEL_MAKE_ENV="DTC_EXT=$(pwd)/tools/dtc CONFIG_BUILD_ARM64_DT_OVERLAY=y"
 
@@ -23,7 +23,33 @@ if [ $compiler == "1" ]; then
 ################# Compiling with GCC #################
 "
 
-	case $1 in
+elif [ $compiler == "2" ]; then
+	COMPILER_ENV=$LLVM_ENV
+
+echo "
+################# Compiling with LLVM #################
+"
+fi
+
+echo "**********************************"
+echo "Select load-tracking variant"
+echo "(1) WALT"
+echo "(2) PELT"
+read -p "Selected variant: " variant
+
+make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 $COMPILER_ENV \
+	r8q_defconfig > /dev/null 2>&1
+
+for i in "$@"; do
+	case $i in
+	pgo)
+	   echo "
+################# Compiling with PGO #################
+"
+
+	    KERNEL_MAKE_ENV="$KERNEL_MAKE_ENV CONFIG_PGO=y"
+	;;
+
 	lto)
 	    echo "
 ################# Compiling GCC LTO build #################
@@ -36,44 +62,8 @@ CONFIG_HAVE_ARCH_PREL32_RELOCATIONS
 " >> out/.config
 	;;
 
-	   *)
-	    echo "# CONFIG_LTO_GCC is not set
-CONFIG_HAVE_ARCH_PREL32_RELOCATIONS=y
-" >> out/.config
-	   ;;
 	esac
-
-elif [ $compiler == "2" ]; then
-	COMPILER_ENV=$LLVM_ENV
-
-echo "
-################# Compiling with LLVM #################
-"
-
-	case $1 in
-	pgo)
-	   echo "
-################# Compiling with Clang PGO #################
-"
-
-	   KERNEL_MAKE_ENV="$KERNEL_MAKE_ENV CONFIG_PGO_CLANG=y"
-
-	;;
-	esac
-fi
-
-echo "**********************************"
-echo "Select load-tracking variant"
-echo "(1) WALT"
-echo "(2) PELT"
-read -p "Selected variant: " variant
-
-<<<<<<< HEAD
-make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 CROSS_COMPILE=$BUILD_CROSS_COMPILE \
-=======
-make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 $COMPILER_ENV \
->>>>>>> 7d677a046c4a (build: add option to compile with llvm)
-	r8q_defconfig > /dev/null 2>&1
+done
 
 if [ $variant == "1" ]; then
     echo "
@@ -98,47 +88,14 @@ CONFIG_PERF_MGR
 
 fi
 
-<<<<<<< HEAD
-    scripts/configcleaner "
-CONFIG_LTO_GCC
-CONFIG_HAVE_ARCH_PREL32_RELOCATIONS
-"
-
-case $1 in
-   lto)
-    echo "
-
-################# Compiling LTO build #################
-
-"
-    echo "CONFIG_LTO_GCC=y
-" >> out/.config
-   ;;
-
-   *)
-    echo "# CONFIG_LTO_GCC is not set
-CONFIG_HAVE_ARCH_PREL32_RELOCATIONS=y
-" >> out/.config
-   ;;
-esac
-
-make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 CROSS_COMPILE=$BUILD_CROSS_COMPILE \
-=======
 make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 $COMPILER_ENV \
->>>>>>> 7d677a046c4a (build: add option to compile with llvm)
 	oldconfig
 
 DATE_START=$(date +"%s")
 
-<<<<<<< HEAD
-make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 CROSS_COMPILE=$BUILD_CROSS_COMPILE
-
-make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 CROSS_COMPILE=$BUILD_CROSS_COMPILE dtbs
-=======
 make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 $COMPILER_ENV
 
 make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 $COMPILER_ENV dtbs
->>>>>>> 7d677a046c4a (build: add option to compile with llvm)
 
 IMAGE="out/arch/arm64/boot/Image.gz"
 DTB_OUT="out/arch/arm64/boot/dts/vendor/qcom"
@@ -147,11 +104,7 @@ cat $DTB_OUT/*.dtb > AnyKernel3/kona.dtb
 
 patch -p1 --merge < patches/freqtable.diff
 
-<<<<<<< HEAD
-make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 CROSS_COMPILE=$BUILD_CROSS_COMPILE dtbs
-=======
 make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 $COMPILER_ENV dtbs
->>>>>>> 7d677a046c4a (build: add option to compile with llvm)
 
 cat $DTB_OUT/*.dtb > AnyKernel3/kona-perf.dtb
 
