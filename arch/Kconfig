@@ -594,9 +594,8 @@ config SHADOW_CALL_STACK_VMAP
 	  provides better stack exhaustion protection, but increases per-thread
 	  memory consumption as a full page is allocated for each shadow stack.
 
-config PGO_CLANG
-	bool "Use Clang Profile Guided Optimization"
-	depends on CC_IS_CLANG
+config PGO
+	bool "Use Profile-Guided Optimization"
 	help
 	  Build kernel using the instrumented profile data.
 

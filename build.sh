@@ -23,7 +23,33 @@ if [ $compiler == "1" ]; then
 ################# Compiling with GCC #################
 "
 
-	case $1 in
+elif [ $compiler == "2" ]; then
+	COMPILER_ENV=$LLVM_ENV
+
+echo "
+################# Compiling with LLVM #################
+"
+fi
+
+echo "**********************************"
+echo "Select load-tracking variant"
+echo "(1) WALT"
+echo "(2) PELT"
+read -p "Selected variant: " variant
+
+make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 $COMPILER_ENV \
+	r8q_defconfig > /dev/null 2>&1
+
+for i in "$@"; do
+	case $i in
+	pgo)
+	   echo "
+################# Compiling with PGO #################
+"
+
+	    KERNEL_MAKE_ENV="$KERNEL_MAKE_ENV CONFIG_PGO=y"
+	;;
+
 	lto)
 	    echo "
 ################# Compiling GCC LTO build #################
@@ -36,40 +62,8 @@ CONFIG_HAVE_ARCH_PREL32_RELOCATIONS
 " >> out/.config
 	;;
 
-	   *)
-	    echo "# CONFIG_LTO_GCC is not set
-CONFIG_HAVE_ARCH_PREL32_RELOCATIONS=y
-" >> out/.config
-	   ;;
 	esac
-
-elif [ $compiler == "2" ]; then
-	COMPILER_ENV=$LLVM_ENV
-
-echo "
-################# Compiling with LLVM #################
-"
-
-	case $1 in
-	pgo)
-	   echo "
-################# Compiling with Clang PGO #################
-"
-
-	   KERNEL_MAKE_ENV="$KERNEL_MAKE_ENV CONFIG_PGO_CLANG=y"
-
-	;;
-	esac
-fi
-
-echo "**********************************"
-echo "Select load-tracking variant"
-echo "(1) WALT"
-echo "(2) PELT"
-read -p "Selected variant: " variant
-
-make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 $COMPILER_ENV \
-	r8q_defconfig > /dev/null 2>&1
+done
 
 if [ $variant == "1" ]; then
     echo "
