@@ -4536,8 +4536,6 @@ __alloc_pages_slowpath(gfp_t gfp_mask, unsigned int order,
 	u64 utime, stime_s, stime_e, stime_d;
 
 	task_cputime(current, &utime, &stime_s);
-	pg_data_t *pgdat = ac->preferred_zoneref->zone->zone_pgdat;
-	bool woke_kswapd = false;
 
 	/*
 	 * We also sanity check to catch abuse of atomic reserves being used by
@@ -4571,13 +4569,8 @@ retry_cpuset:
 	if (!ac->preferred_zoneref->zone)
 		goto nopage;
 
-	if (alloc_flags & ALLOC_KSWAPD) {
-		if (!woke_kswapd) {
-			atomic_inc(&pgdat->kswapd_waiters);
-			woke_kswapd = true;
-		}
+	if (alloc_flags & ALLOC_KSWAPD)
 		wake_all_kswapds(order, gfp_mask, ac);
-	}
 
 	/*
 	 * The adjusted alloc_flags might result in immediate success, so try
@@ -4780,6 +4773,8 @@ nopage:
 		goto retry;
 	}
 fail:
+	warn_alloc(gfp_mask, ac->nodemask,
+			"page allocation failure: order:%u", order);
 got_pg:
 	task_cputime(current, &utime, &stime_e);
 	stime_d = stime_e - stime_s;
@@ -4804,11 +4799,6 @@ got_pg:
 			a_anon << (PAGE_SHIFT-10), in_anon << (PAGE_SHIFT-10),
 			a_file << (PAGE_SHIFT-10), in_file << (PAGE_SHIFT-10));
 	}
-	if (woke_kswapd)
-		atomic_dec(&pgdat->kswapd_waiters);
-	if (!page)
-		warn_alloc(gfp_mask, ac->nodemask,
-				"page allocation failure: order:%u", order);
 	return page;
 }
 
@@ -6770,7 +6760,6 @@ static void __meminit pgdat_init_internals(struct pglist_data *pgdat)
 	pgdat_page_ext_init(pgdat);
 	spin_lock_init(&pgdat->lru_lock);
 	lruvec_init(node_lruvec(pgdat));
-	pgdat->kswapd_waiters = (atomic_t)ATOMIC_INIT(0);
 }
 
 static void __meminit zone_init_internals(struct zone *zone, enum zone_type idx, int nid,
