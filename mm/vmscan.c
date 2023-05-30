@@ -2568,15 +2568,15 @@ static int shrinker_debug_show(struct seq_file *s, void *unused)
 	struct shrinker *shrinker;
 
 readlock_retry:
-	if (!down_read_trylock(&shrinker_rwsem)) {
+	if (!down_read_trylock(&shrinker->del_rwsem)) {
 		if (retry-- > 0) {
 			msleep(10);
 			goto readlock_retry;
 		}
-
 		return 0;
 	}
 
+	read_lock(&shrinker_rwlock);
 	list_for_each_entry(shrinker, &shrinker_list, list)
 		seq_printf(s, "%pF nr_total:%lu nr_delay:%lu jiffies:%u ms cpu:%lu ms\n",
 			shrinker->scan_objects,
@@ -2585,7 +2585,8 @@ readlock_retry:
 			jiffies_to_msecs(shrinker->jiffies_time.counter),
 			shrinker->cpu_time.counter / NSEC_PER_MSEC);
 		
-	up_read(&shrinker_rwsem);
+	up_read(&shrinker->del_rwsem);
+	read_unlock(&shrinker_rwlock);
 
 	return 0;
 }
