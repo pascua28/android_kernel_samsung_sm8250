@@ -206,7 +206,7 @@ static inline void binder_user_error(const char *fmt, ...)
 	container_of(hdr, struct binder_fd_array_object, hdr)
 
 static struct kmem_cache *binder_node_pool;
-static struct kmem_cache *binder_eproc_pool;
+static struct kmem_cache *binder_proc_pool;
 static struct kmem_cache *binder_ref_death_pool;
 static struct kmem_cache *binder_ref_pool;
 static struct kmem_cache *binder_thread_pool;
@@ -5032,7 +5032,7 @@ static void binder_free_proc(struct binder_proc *proc)
 	put_task_struct(proc->tsk);
 	put_cred(proc->cred);
 	binder_stats_deleted(BINDER_STAT_PROC);
-	kmem_cache_free(binder_eproc_pool, proc);
+	kmem_cache_free(binder_proc_pool, proc);
 }
 
 static void binder_free_thread(struct binder_thread *thread)
@@ -5560,7 +5560,7 @@ static int binder_open(struct inode *nodp, struct file *filp)
 	binder_debug(BINDER_DEBUG_OPEN_CLOSE, "%s: %d:%d\n", __func__,
 		     current->group_leader->pid, current->pid);
 
-	proc = kmem_cache_zalloc(binder_eproc_pool, GFP_KERNEL);
+	proc = kmem_cache_zalloc(binder_proc_pool, GFP_KERNEL);
 	if (proc == NULL)
 		return -ENOMEM;
 	spin_lock_init(&proc->inner_lock);
@@ -6637,8 +6637,8 @@ static int __init binder_create_pools(void)
 	if (!binder_node_pool)
 		goto err_node_pool;
 
-	binder_eproc_pool = KMEM_CACHE(binder_proc_ext, SLAB_HWCACHE_ALIGN);
-	if (!binder_eproc_pool)
+	binder_proc_pool = KMEM_CACHE(binder_proc, SLAB_HWCACHE_ALIGN);
+	if (!binder_proc_pool)
 		goto err_proc_pool;
 
 	binder_ref_death_pool = KMEM_CACHE(binder_ref_death, SLAB_HWCACHE_ALIGN);
@@ -6672,7 +6672,7 @@ err_thread_pool:
 err_ref_pool:
 	kmem_cache_destroy(binder_ref_death_pool);
 err_ref_death_pool:
-	kmem_cache_destroy(binder_eproc_pool);
+	kmem_cache_destroy(binder_proc_pool);
 err_proc_pool:
 	kmem_cache_destroy(binder_node_pool);
 err_node_pool:
@@ -6684,7 +6684,7 @@ static void __init binder_destroy_pools(void)
 {
 	binder_buffer_pool_destroy();
 	kmem_cache_destroy(binder_node_pool);
-	kmem_cache_destroy(binder_eproc_pool);
+	kmem_cache_destroy(binder_proc_pool);
 	kmem_cache_destroy(binder_ref_death_pool);
 	kmem_cache_destroy(binder_ref_pool);
 	kmem_cache_destroy(binder_thread_pool);
