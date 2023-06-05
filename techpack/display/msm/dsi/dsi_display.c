@@ -3398,9 +3398,9 @@ int dsi_pre_clkoff_cb(void *priv,
 
 	ctrl = &display->ctrl[0];
 	dsi_ctrl = ctrl->ctrl;
-	spin_lock_irqsave(&dsi_ctrl->irq_info.irq_lock, flags);
+	raw_spin_lock_irqsave(&dsi_ctrl->irq_info.irq_lock, flags);
 	refcount = dsi_ctrl->irq_info.irq_stat_refcount[DSI_SINT_CMD_MODE_DMA_DONE];
-	spin_unlock_irqrestore(&dsi_ctrl->irq_info.irq_lock, flags);
+	raw_spin_unlock_irqrestore(&dsi_ctrl->irq_info.irq_lock, flags);
 
 #if 0
 	if (refcount > 0 && !atomic_read(&display->clkrate_change_pending)) {
@@ -3623,9 +3623,9 @@ int dsi_post_clkoff_cb(void *priv,
 
 	ctrl = &display->ctrl[0];
 	dsi_ctrl = ctrl->ctrl;
-	spin_lock_irqsave(&dsi_ctrl->irq_info.irq_lock, flags);
+	raw_spin_lock_irqsave(&dsi_ctrl->irq_info.irq_lock, flags);
 	refcount = dsi_ctrl->irq_info.irq_stat_refcount[DSI_SINT_CMD_MODE_DMA_DONE];
-	spin_unlock_irqrestore(&dsi_ctrl->irq_info.irq_lock, flags);
+	raw_spin_unlock_irqrestore(&dsi_ctrl->irq_info.irq_lock, flags);
 
 	if (refcount > 0 && !atomic_read(&display->clkrate_change_pending))
 		pr_info("DSI-%d: DSI_DMA ref.count=%d", dsi_ctrl->cell_index, refcount);
