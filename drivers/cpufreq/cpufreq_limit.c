@@ -158,6 +158,7 @@ struct cpufreq_limit_handle *cpufreq_limit_get_handle(int id)
 	return &cpufreq_limit_handle_list[id];
 }
 
+#ifdef CONFIG_HOTPLUG_CPU
 void cpufreq_limit_corectl(int freq)
 {
 	unsigned int cpu;
@@ -184,6 +185,7 @@ void cpufreq_limit_corectl(int freq)
 		}
 	}
 }
+#endif
 
 static bool cpufreq_limit_make_table(void)
 {
