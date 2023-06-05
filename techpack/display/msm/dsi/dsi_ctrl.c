@@ -3096,9 +3096,9 @@ bool dsi_ctrl_interrupt_enabled(struct dsi_ctrl *dsi_ctrl,uint32_t intr_idx)
 			intr_idx >= DSI_STATUS_INTERRUPT_COUNT)
 		return false;
 
-	spin_lock_irqsave(&dsi_ctrl->irq_info.irq_lock, flags);
+	raw_spin_lock_irqsave(&dsi_ctrl->irq_info.irq_lock, flags);
 	ret = (dsi_ctrl->irq_info.irq_stat_refcount[intr_idx]>0) ? true : false;
-	spin_unlock_irqrestore(&dsi_ctrl->irq_info.irq_lock, flags);
+	raw_spin_unlock_irqrestore(&dsi_ctrl->irq_info.irq_lock, flags);
 	SDE_EVT32(dsi_ctrl->cell_index, ret);
 	return ret;
 }
