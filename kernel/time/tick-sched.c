@@ -1491,6 +1491,7 @@ void save_pcpu_tick(int cpu)
 }
 EXPORT_SYMBOL(save_pcpu_tick);
 
+#ifdef CONFIG_HOTPLUG_CPU
 void restore_pcpu_tick(int cpu)
 {
 	struct tick_sched *ts = &per_cpu(tick_cpu_sched, cpu);
@@ -1500,3 +1501,4 @@ void restore_pcpu_tick(int cpu)
 	ts->idle_calls = saved_pcpu_ts[cpu].idle_calls;
 }
 EXPORT_SYMBOL(restore_pcpu_tick);
+#endif
