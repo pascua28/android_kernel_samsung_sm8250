@@ -22,7 +22,7 @@ static int swork_kthread(void *arg)
 		struct swork_event *sev, *tmp;
 		struct llist_node *node;
 
-		swait_event_interruptible(swork_wq,
+		swait_event_interruptible_exclusive(swork_wq,
 					  (node = llist_del_all(&swork_llist)));
 
 		llist_for_each_entry_safe(sev, tmp, node, item) {
@@ -49,7 +49,7 @@ bool swork_queue(struct swork_event *sev)
 
 	llist_add(&sev->item, &swork_llist);
 	if (!atomic_cmpxchg_relaxed(&run_sworks, 0, 1))
-		swake_up(&swork_wq);
+		swake_up_one(&swork_wq);
 	return true;
 }
 
