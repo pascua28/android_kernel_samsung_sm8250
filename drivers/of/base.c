@@ -210,7 +210,7 @@ void of_populate_phandle_cache(void)
 	phandle_cache_mask = cache_entries - 1;
 
 	phandle_cache = kcalloc(cache_entries, sizeof(*phandle_cache),
-				GFP_ATOMIC);
+				GFP_KERNEL);
 	raw_spin_lock_irqsave(&devtree_lock, flags);
 	if (!phandle_cache)
 		goto out;
