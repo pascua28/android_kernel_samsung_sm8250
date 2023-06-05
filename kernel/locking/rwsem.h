@@ -26,17 +26,6 @@
 # define DEBUG_RWSEMS_WARN_ON(c)
 #endif
 
-enum rwsem_waiter_type {
-	RWSEM_WAITING_FOR_WRITE,
-	RWSEM_WAITING_FOR_READ
-};
-
-struct rwsem_waiter {
-	struct list_head list;
-	struct task_struct *task;
-	enum rwsem_waiter_type type;
-};
-
 #ifdef CONFIG_RWSEM_SPIN_ON_OWNER
 /*
  * All writes to owner are protected by WRITE_ONCE() to make sure that
@@ -94,86 +83,5 @@ static inline void rwsem_clear_owner(struct rw_semaphore *sem)
 
 static inline void rwsem_set_reader_owned(struct rw_semaphore *sem)
 {
-}
-#endif
-
-#ifdef CONFIG_FAST_TRACK
-#include <cpu/ftt/ftt.h>
-#endif
-#ifdef CONFIG_RWSEM_PRIO_AWARE
-
-#define RWSEM_MAX_PREEMPT_ALLOWED 3000
-
-/*
- * Return true if current waiter is added in the front of the rwsem wait list.
- */
-static inline bool rwsem_list_add_per_prio(struct rwsem_waiter *waiter_in,
-				    struct rw_semaphore *sem)
-{
-	struct list_head *pos;
-	struct list_head *head;
-	struct rwsem_waiter *waiter = NULL;
-#ifdef CONFIG_FAST_TRACK
-	int doftt;
-#endif
-
-	pos = head = &sem->wait_list;
-	/*
-	 * Rules for task prio aware rwsem wait list queueing:
-	 * 1:	Only try to preempt waiters with which task priority
-	 *	which is higher than DEFAULT_PRIO.
-	 * 2:	To avoid starvation, add count to record
-	 *	how many high priority waiters preempt to queue in wait
-	 *	list.
-	 *	If preempt count is exceed RWSEM_MAX_PREEMPT_ALLOWED,
-	 *	use simple fifo until wait list is empty.
-	 */
-	if (list_empty(head)) {
-		list_add_tail(&waiter_in->list, head);
-		sem->m_count = 0;
-		return true;
-	}
-
-#ifdef CONFIG_FAST_TRACK
-	doftt = is_ftt(&waiter_in->task->se);
-	if ((waiter_in->task->prio < DEFAULT_PRIO || doftt)
-#else
-	if (waiter_in->task->prio < DEFAULT_PRIO
-#endif
-		&& sem->m_count < RWSEM_MAX_PREEMPT_ALLOWED) {
-
-		list_for_each(pos, head) {
-			waiter = list_entry(pos, struct rwsem_waiter, list);
-#ifdef CONFIG_FAST_TRACK
-			if (is_ftt(&waiter->task->se))
-				continue;
-			if (doftt) {
-				list_add(&waiter_in->list, pos->prev);
-				sem->m_count++;
-				return &waiter_in->list == head->next;
-			}
-#endif
-			if (waiter->task->prio > waiter_in->task->prio) {
-				list_add(&waiter_in->list, pos->prev);
-				sem->m_count++;
-				return &waiter_in->list == head->next;
-			}
-		}
-	}
-
-	list_add_tail(&waiter_in->list, head);
-
-	return false;
-}
-#else
-static inline bool rwsem_list_add_per_prio(struct rwsem_waiter *waiter_in,
-				    struct rw_semaphore *sem)
-{
-#ifdef CONFIG_FAST_TRACK
-	rwsem_list_add(waiter_in->task, &waiter_in->list, &sem->wait_list);
-#else
-	list_add_tail(&waiter_in->list, &sem->wait_list);
-#endif
-	return false;
 }
 #endif
