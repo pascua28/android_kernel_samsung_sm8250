@@ -8975,7 +8975,7 @@ void migrate_enable(void)
 
 		rq = task_rq_lock(p, &rf);
 		update_rq_clock(rq);
-		arg->dest_cpu = select_fallback_rq(cpu, p);
+		arg->dest_cpu = select_fallback_rq(cpu, p, false);
 		task_rq_unlock(rq, p, &rf);
 
 		stop_one_cpu_nowait(task_cpu(p), migration_cpu_stop,
