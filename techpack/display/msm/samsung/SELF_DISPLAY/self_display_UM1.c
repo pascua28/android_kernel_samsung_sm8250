@@ -144,7 +144,7 @@ static void self_mask_img_write(struct samsung_display_driver_data *vdd)
 
 	mutex_lock(&vdd->exclusive_tx.ex_tx_lock);
 	vdd->exclusive_tx.enable = 1;
-	while (!list_empty(&vdd->cmd_lock.wait_list) && --wait_cnt)
+	while (is_waiting && --wait_cnt)
 		usleep_range(500, 500);
 
 	ss_set_exclusive_tx_packet(vdd, TX_LEVEL1_KEY_ENABLE, 1);
@@ -242,7 +242,7 @@ static int self_mask_check(struct samsung_display_driver_data *vdd)
 	/* Do not permit image update (2C, 3C) during sending self mask image (4C, 5C) */
 	mutex_lock(&vdd->exclusive_tx.ex_tx_lock);
 	vdd->exclusive_tx.enable = 1;
-	while (!list_empty(&vdd->cmd_lock.wait_list) && --wait_cnt)
+	while (is_waiting && --wait_cnt)
 		usleep_range(500, 500);
 
 	ss_set_exclusive_tx_packet(vdd, TX_LEVEL1_KEY_ENABLE, 1);
