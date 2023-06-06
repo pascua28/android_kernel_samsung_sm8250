@@ -791,7 +791,7 @@ static void self_mask_img_write(struct samsung_display_driver_data *vdd)
 
 	mutex_lock(&vdd->exclusive_tx.ex_tx_lock);
 	vdd->exclusive_tx.enable = 1;
-	while (!list_empty(&vdd->cmd_lock.wait_list)) {
+	while (is_waiting) {
 		int wait_cnt = 0; /* 1000 * 0.5ms = 500ms */
 		if (++wait_cnt > 500)
 			break;

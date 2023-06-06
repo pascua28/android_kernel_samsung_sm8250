@@ -1130,7 +1130,7 @@ void __flash_br(struct samsung_display_driver_data *vdd)
 	mutex_lock(&vdd->exclusive_tx.ex_tx_lock);
 	vdd->exclusive_tx.permit_frame_update = 1;
 	vdd->exclusive_tx.enable = 1;
-	while (!list_empty(&vdd->cmd_lock.wait_list) && --wait_cnt)
+	while (is_waiting && --wait_cnt)
 		usleep_range(500, 500);
 
 	if (test_bit(BOOST_CPU, vdd->br_info.panel_br_info.flash_br_boosting)) {
