@@ -101,7 +101,7 @@ struct cpufreq_qcom {
 struct cpufreq_counter {
 	u64 total_cycle_counter;
 	u32 prev_cycle_counter;
-	spinlock_t lock;
+	raw_spinlock_t lock;
 };
 
 struct cpufreq_cooling_cdev {
@@ -292,7 +292,7 @@ static u64 qcom_cpufreq_get_cpu_cycle_counter(int cpu)
 
 	cpu_domain = qcom_freq_domain_map[cpu];
 	cpu_counter = &qcom_cpufreq_counter[cpu];
-	spin_lock_irqsave(&cpu_counter->lock, flags);
+	raw_spin_lock_irqsave(&cpu_counter->lock, flags);
 
 	offset = CYCLE_CNTR_OFFSET(cpu, &cpu_domain->related_cpus,
 					accumulative_counter);
@@ -310,7 +310,7 @@ static u64 qcom_cpufreq_get_cpu_cycle_counter(int cpu)
 		cpu_counter->prev_cycle_counter = val;
 	}
 	cycle_counter_ret = cpu_counter->total_cycle_counter;
-	spin_unlock_irqrestore(&cpu_counter->lock, flags);
+	raw_spin_unlock_irqrestore(&cpu_counter->lock, flags);
 
 	return cycle_counter_ret;
 }
@@ -934,7 +934,7 @@ static int qcom_cpufreq_hw_driver_probe(struct platform_device *pdev)
 	}
 
 	for_each_possible_cpu(cpu)
-		spin_lock_init(&qcom_cpufreq_counter[cpu].lock);
+		raw_spin_lock_init(&qcom_cpufreq_counter[cpu].lock);
 
 	rc = cpufreq_register_driver(&cpufreq_qcom_hw_driver);
 	if (rc) {
