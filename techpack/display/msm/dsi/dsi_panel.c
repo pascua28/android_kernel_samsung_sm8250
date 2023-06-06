@@ -682,6 +682,7 @@ static int dsi_panel_tx_cmd_set(struct dsi_panel *panel,
 				type, ss_get_cmd_name(type));
 	}
 	mutex_lock(&vdd->cmd_lock);
+	is_waiting = true;
 #else
 	if (!panel || !panel->cur_mode)
 		return -EINVAL;
@@ -794,6 +795,7 @@ static int dsi_panel_tx_cmd_set(struct dsi_panel *panel,
 	}
 error:
 #if defined(CONFIG_DISPLAY_SAMSUNG)
+	is_waiting = false;
 	mutex_unlock(&vdd->cmd_lock);
 #endif
 	return rc;

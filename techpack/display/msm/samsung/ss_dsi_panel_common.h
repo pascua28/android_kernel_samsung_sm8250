@@ -95,6 +95,7 @@ Copyright (C) 2012, Samsung Electronics. All rights reserved.
 #endif
 
 extern bool enable_pr_debug;
+extern bool is_waiting;
 
 #define LOG_KEYWORD "[SDE]"
 

@@ -281,7 +281,7 @@ static void ss_mafpc_img_write(struct samsung_display_driver_data *vdd, bool is_
 	mutex_lock(&vdd->exclusive_tx.ex_tx_lock);
 	vdd->exclusive_tx.enable = 1;
 
-	while (!list_empty(&vdd->cmd_lock.wait_list) && --wait_cnt)
+	while (is_waiting && --wait_cnt)
 		usleep_range(500, 500);
 
 	vdd->exclusive_tx.permit_frame_update = 0;
@@ -437,7 +437,7 @@ static int ss_mafpc_crc_check(struct samsung_display_driver_data *vdd)
 	mutex_lock(&vdd->exclusive_tx.ex_tx_lock);
 	vdd->exclusive_tx.enable = 1;
 
-	while (!list_empty(&vdd->cmd_lock.wait_list) && --wait_cnt)
+	while (is_waiting && --wait_cnt)
 		usleep_range(500, 500);
 
 	ss_set_exclusive_tx_packet(vdd, TX_MAFPC_CRC_CHECK_PRE1, 1);

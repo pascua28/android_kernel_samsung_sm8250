@@ -392,6 +392,7 @@ static void dsi_display_aspace_cb_locked(void *cb_data, bool is_detach)
 #if defined(CONFIG_DISPLAY_SAMSUNG)
 	vdd = display->panel->panel_private;
 	mutex_lock(&vdd->cmd_lock);
+	is_waiting = true;
 #endif
 
 	if (is_detach) {
@@ -429,6 +430,7 @@ static void dsi_display_aspace_cb_locked(void *cb_data, bool is_detach)
 
 end:
 #if defined(CONFIG_DISPLAY_SAMSUNG)
+	is_waiting = false;
 	mutex_unlock(&vdd->cmd_lock);
 #endif
 	/* release panel_lock */
@@ -5181,12 +5183,14 @@ static int dsi_display_force_update_dsi_clk(struct dsi_display *display)
 	 * To prevent above race condition, add vdd->cmd_lock in this function.
 	 */
 	mutex_lock(&vdd->cmd_lock);
+	is_waiting = true;
 #endif
 
 	SDE_EVT32(0xefef, 0x1111);
 	rc = dsi_display_link_clk_force_update_ctrl(display->dsi_clk_handle);
 
 #if defined(CONFIG_DISPLAY_SAMSUNG)
+	is_waiting = false;
 	mutex_unlock(&vdd->cmd_lock);
 #endif
 

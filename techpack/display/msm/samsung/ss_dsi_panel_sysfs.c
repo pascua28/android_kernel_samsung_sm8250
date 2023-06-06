@@ -4154,7 +4154,7 @@ static ssize_t ss_read_flash_store(struct device *dev,
 	mutex_lock(&vdd->exclusive_tx.ex_tx_lock);
 	vdd->exclusive_tx.permit_frame_update = 1;
 	vdd->exclusive_tx.enable = 1;
-	while (!list_empty(&vdd->cmd_lock.wait_list) && --wait_cnt)
+	while (is_waiting && --wait_cnt)
 		usleep_range(500, 500);
 
 	ss_set_exclusive_tx_packet(vdd, TX_FLASH_GAMMA_PRE1, 1);

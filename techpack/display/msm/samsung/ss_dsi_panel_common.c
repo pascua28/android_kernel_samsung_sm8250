@@ -51,6 +51,8 @@ static DEFINE_MUTEX(dyn_mipi_clock);
 
 LIST_HEAD(vdds_list);
 
+bool is_waiting = false;
+
 char *brr_mode_name[MAX_ALL_BRR_MODE] = {
 	"BRR_48_60",
 	"BRR_60_48",
@@ -6533,7 +6535,7 @@ int ss_brightness_dcs(struct samsung_display_driver_data *vdd, int level, int ba
 					locked = 1;
 				}
 				vdd->exclusive_tx.enable = 1;
-				while (!list_empty(&vdd->cmd_lock.wait_list) && --wait_cnt)
+				while (is_waiting && --wait_cnt)
 					usleep_range(500, 500);
 
 				vdd->exclusive_tx.permit_frame_update = 0;
@@ -6870,7 +6872,7 @@ void ss_read_mtp(struct samsung_display_driver_data *vdd, int addr, int len, int
 	mutex_lock(&vdd->exclusive_tx.ex_tx_lock);
 	vdd->exclusive_tx.permit_frame_update = 1;
 	vdd->exclusive_tx.enable = 1;
-	while (!list_empty(&vdd->cmd_lock.wait_list) && --wait_cnt)
+	while (is_waiting && --wait_cnt)
 		usleep_range(500, 500);
 
 	ss_set_exclusive_tx_packet(vdd, RX_MTP_READ_SYSFS, 1);
