@@ -2923,11 +2923,14 @@ static int page_lru_tier(struct page *page)
 	return lru_tier_from_refs(refs);
 }
 
+static bool get_cap(int cap)
+{
 #ifdef CONFIG_LRU_GEN_ENABLED
-#define get_cap(cap)	static_branch_likely(&lru_gen_caps[cap])
+	return static_branch_likely(&lru_gen_caps[cap]);
 #else
-#define get_cap(cap)	static_branch_unlikely(&lru_gen_caps[cap])
+	return static_branch_unlikely(&lru_gen_caps[cap]);
 #endif
+}
 
 static struct lruvec *get_lruvec(struct mem_cgroup *memcg, int nid)
 {
