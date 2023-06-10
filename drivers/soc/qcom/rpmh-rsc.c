@@ -886,7 +886,7 @@ static int rpmh_rsc_probe(struct platform_device *pdev)
 	drv->irq = irq;
 
 	ret = devm_request_irq(&pdev->dev, irq, tcs_tx_done,
-			       IRQF_TRIGGER_HIGH | IRQF_NO_THREAD,
+			       IRQF_TRIGGER_HIGH | IRQF_NO_SUSPEND | IRQF_NO_THREAD,
 			       drv->name, drv);
 	if (ret)
 		return ret;
