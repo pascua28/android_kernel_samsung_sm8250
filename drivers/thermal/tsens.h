@@ -204,8 +204,8 @@ struct tsens_device {
 	void					*ipc_log2;
 	phys_addr_t				phys_addr_tm;
 	struct tsens_dbg_context	tsens_dbg;
-	spinlock_t			tsens_crit_lock;
-	spinlock_t			tsens_upp_low_lock;
+	raw_spinlock_t			tsens_crit_lock;
+	raw_spinlock_t			tsens_upp_low_lock;
 	const struct tsens_data		*ctrl_data;
 	struct tsens_mtc_sysfs  mtcsys;
 	int				trdy_fail_ctr;

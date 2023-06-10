@@ -155,10 +155,10 @@ int ion_heap_pages_zero(struct page *page, size_t size, pgprot_t pgprot)
 
 void ion_heap_freelist_add(struct ion_heap *heap, struct ion_buffer *buffer)
 {
-	spin_lock(&heap->free_lock);
+	raw_spin_lock(&heap->free_lock);
 	list_add(&buffer->list, &heap->free_list);
 	heap->free_list_size += buffer->size;
-	spin_unlock(&heap->free_lock);
+	raw_spin_unlock(&heap->free_lock);
 	wake_up(&heap->waitqueue);
 }
 
@@ -166,9 +166,9 @@ size_t ion_heap_freelist_size(struct ion_heap *heap)
 {
 	size_t size;
 
-	spin_lock(&heap->free_lock);
+	raw_spin_lock(&heap->free_lock);
 	size = heap->free_list_size;
-	spin_unlock(&heap->free_lock);
+	raw_spin_unlock(&heap->free_lock);
 
 	return size;
 }
@@ -182,7 +182,7 @@ static size_t _ion_heap_freelist_drain(struct ion_heap *heap, size_t size,
 	if (ion_heap_freelist_size(heap) == 0)
 		return 0;
 
-	spin_lock(&heap->free_lock);
+	raw_spin_lock(&heap->free_lock);
 	if (size == 0)
 		size = heap->free_list_size;
 
@@ -196,11 +196,11 @@ static size_t _ion_heap_freelist_drain(struct ion_heap *heap, size_t size,
 		if (skip_pools)
 			buffer->private_flags |= ION_PRIV_FLAG_SHRINKER_FREE;
 		total_drained += buffer->size;
-		spin_unlock(&heap->free_lock);
+		raw_spin_unlock(&heap->free_lock);
 		ion_buffer_destroy(buffer);
-		spin_lock(&heap->free_lock);
+		raw_spin_lock(&heap->free_lock);
 	}
-	spin_unlock(&heap->free_lock);
+	raw_spin_unlock(&heap->free_lock);
 
 	return total_drained;
 }
@@ -225,16 +225,16 @@ static int ion_heap_deferred_free(void *data)
 		wait_event_freezable(heap->waitqueue,
 				     ion_heap_freelist_size(heap) > 0);
 
-		spin_lock(&heap->free_lock);
+		raw_spin_lock(&heap->free_lock);
 		if (list_empty(&heap->free_list)) {
-			spin_unlock(&heap->free_lock);
+			raw_spin_unlock(&heap->free_lock);
 			continue;
 		}
 		buffer = list_first_entry(&heap->free_list, struct ion_buffer,
 					  list);
 		list_del(&buffer->list);
 		heap->free_list_size -= buffer->size;
-		spin_unlock(&heap->free_lock);
+		raw_spin_unlock(&heap->free_lock);
 		ion_buffer_destroy(buffer);
 	}
 

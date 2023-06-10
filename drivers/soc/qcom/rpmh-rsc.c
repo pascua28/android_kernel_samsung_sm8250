@@ -461,11 +461,8 @@ int rpmh_rsc_send_data(struct rsc_drv *drv, const struct tcs_request *msg)
 
 	do {
 		ret = tcs_write(drv, msg);
-		if (ret == -EBUSY) {
-			pr_info_ratelimited("DRV:%s TCS Busy, retrying RPMH message send: addr=%#x\n",
-					    drv->name, msg->cmds[0].addr);
-			udelay(10);
-		}
+		if (ret == -EBUSY)
+			udelay(20);
 	} while (ret == -EBUSY);
 
 	return ret;
@@ -889,7 +886,7 @@ static int rpmh_rsc_probe(struct platform_device *pdev)
 	drv->irq = irq;
 
 	ret = devm_request_irq(&pdev->dev, irq, tcs_tx_done,
-			       IRQF_TRIGGER_HIGH | IRQF_NO_SUSPEND,
+			       IRQF_TRIGGER_HIGH | IRQF_NO_THREAD,
 			       drv->name, drv);
 	if (ret)
 		return ret;
@@ -897,7 +894,7 @@ static int rpmh_rsc_probe(struct platform_device *pdev)
 	/* Enable the active TCS to send requests immediately */
 	write_tcs_reg(drv, RSC_DRV_IRQ_ENABLE, 0, drv->tcs[ACTIVE_TCS].mask);
 
-	spin_lock_init(&drv->client.cache_lock);
+	raw_spin_lock_init(&drv->client.cache_lock);
 	INIT_LIST_HEAD(&drv->client.cache);
 	INIT_LIST_HEAD(&drv->client.batch_cache);
 

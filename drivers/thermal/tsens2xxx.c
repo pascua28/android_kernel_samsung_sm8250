@@ -493,7 +493,7 @@ static int tsens2xxx_set_trip_temp(struct tsens_sensor *tm_sensor,
 	pr_debug("%s: sensor:%d low_temp(mdegC):%d, high_temp(mdegC):%d\n",
 			__func__, tm_sensor->hw_id, low_temp, high_temp);
 
-	spin_lock_irqsave(&tmdev->tsens_upp_low_lock, flags);
+	raw_spin_lock_irqsave(&tmdev->tsens_upp_low_lock, flags);
 
 	if (high_temp != INT_MAX) {
 		tmdev->sensor[tm_sensor->hw_id].thr_state.high_temp = high_temp;
@@ -566,7 +566,7 @@ static int tsens2xxx_set_trip_temp(struct tsens_sensor *tm_sensor,
 	}
 
 fail:
-	spin_unlock_irqrestore(&tmdev->tsens_upp_low_lock, flags);
+	raw_spin_unlock_irqrestore(&tmdev->tsens_upp_low_lock, flags);
 	return rc;
 }
 
@@ -624,7 +624,7 @@ static irqreturn_t tsens_tm_critical_irq_thread(int irq, void *data)
 		if (IS_ERR(tm->sensor[i].tzd))
 			continue;
 
-		spin_lock_irqsave(&tm->tsens_crit_lock, flags);
+		raw_spin_lock_irqsave(&tm->tsens_crit_lock, flags);
 		addr_offset = tm->sensor[i].hw_id *
 						TSENS_TM_SN_ADDR_OFFSET;
 		status = readl_relaxed(sensor_status_addr + addr_offset);
@@ -648,7 +648,7 @@ static irqreturn_t tsens_tm_critical_irq_thread(int irq, void *data)
 			tm->sensor[i].thr_state.crit_th_state =
 						THERMAL_DEVICE_DISABLED;
 		}
-		spin_unlock_irqrestore(&tm->tsens_crit_lock, flags);
+		raw_spin_unlock_irqrestore(&tm->tsens_crit_lock, flags);
 	}
 
 	/* Mask critical interrupt */
@@ -686,7 +686,7 @@ static irqreturn_t tsens_tm_irq_thread(int irq, void *data)
 			continue;
 		}
 
-		spin_lock_irqsave(&tm->tsens_upp_low_lock, flags);
+		raw_spin_lock_irqsave(&tm->tsens_upp_low_lock, flags);
 		addr_offset = tm->sensor[i].hw_id *
 						TSENS_TM_SN_ADDR_OFFSET;
 		status = readl_relaxed(sensor_status_addr + addr_offset);
@@ -758,7 +758,7 @@ static irqreturn_t tsens_tm_irq_thread(int irq, void *data)
 						THERMAL_DEVICE_DISABLED;
 			}
 		}
-		spin_unlock_irqrestore(&tm->tsens_upp_low_lock, flags);
+		raw_spin_unlock_irqrestore(&tm->tsens_upp_low_lock, flags);
 
 		if (upper_thr || lower_thr) {
 			/* Use id for multiple controllers */
@@ -825,8 +825,8 @@ static int tsens2xxx_hw_init(struct tsens_device *tmdev)
 	if (rc)
 		return rc;
 
-	spin_lock_init(&tmdev->tsens_crit_lock);
-	spin_lock_init(&tmdev->tsens_upp_low_lock);
+	raw_spin_lock_init(&tmdev->tsens_crit_lock);
+	raw_spin_lock_init(&tmdev->tsens_upp_low_lock);
 
 	if (tmdev->ctrl_data->mtc) {
 		if (tmdev->ops->dbg)

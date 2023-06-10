@@ -219,7 +219,7 @@ static int tsens1xxx_set_trip_temp(struct tsens_sensor *tm_sensor,
 	if (!tmdev)
 		return -EINVAL;
 
-	spin_lock_irqsave(&tmdev->tsens_upp_low_lock, flags);
+	raw_spin_lock_irqsave(&tmdev->tsens_upp_low_lock, flags);
 
 	if (high_temp != INT_MAX) {
 		high_temp /= TSENS_SCALE_MILLIDEG;
@@ -303,7 +303,7 @@ static int tsens1xxx_set_trip_temp(struct tsens_sensor *tm_sensor,
 	}
 
 fail:
-	spin_unlock_irqrestore(&tmdev->tsens_upp_low_lock, flags);
+	raw_spin_unlock_irqrestore(&tmdev->tsens_upp_low_lock, flags);
 	return rc;
 }
 
@@ -332,7 +332,7 @@ static irqreturn_t tsens_irq_thread(int irq, void *data)
 			continue;
 		}
 
-		spin_lock_irqsave(&tm->tsens_upp_low_lock, flags);
+		raw_spin_lock_irqsave(&tm->tsens_upp_low_lock, flags);
 
 		addr_offset = tm->sensor[i].hw_id *
 						TSENS_SN_ADDR_OFFSET;
@@ -384,7 +384,7 @@ static irqreturn_t tsens_irq_thread(int irq, void *data)
 					THERMAL_DEVICE_DISABLED;
 			}
 		}
-		spin_unlock_irqrestore(&tm->tsens_upp_low_lock, flags);
+		raw_spin_unlock_irqrestore(&tm->tsens_upp_low_lock, flags);
 
 		if (upper_thr || lower_thr) {
 			pr_debug("sensor:%d trigger temp (%d degC)\n",
@@ -435,7 +435,7 @@ static int tsens1xxx_hw_init(struct tsens_device *tmdev)
 	writel_relaxed(TSENS_INTERRUPT_EN,
 			TSENS_UPPER_LOWER_INTERRUPT_CTRL(tmdev->tsens_tm_addr));
 
-	spin_lock_init(&tmdev->tsens_upp_low_lock);
+	raw_spin_lock_init(&tmdev->tsens_upp_low_lock);
 	if (tmdev->ctrl_data->mtc) {
 		if (tmdev->ops->dbg)
 			tmdev->ops->dbg(tmdev, 0, TSENS_DBG_MTC_DATA, NULL);

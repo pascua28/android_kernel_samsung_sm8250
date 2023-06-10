@@ -254,7 +254,7 @@ struct ion_heap {
 	struct list_head free_list;
 	size_t free_list_size;
 	/* Protect the free list */
-	spinlock_t free_lock;
+	raw_spinlock_t free_lock;
 	wait_queue_head_t waitqueue;
 	struct task_struct *task;
 	atomic_long_t total_allocated;

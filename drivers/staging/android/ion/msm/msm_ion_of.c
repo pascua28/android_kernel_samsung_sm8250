@@ -349,15 +349,6 @@ static int msm_ion_probe(struct platform_device *pdev)
 		if (IS_ERR_OR_NULL(heaps[i])) {
 			heaps[i] = 0;
 			continue;
-		} else {
-			if (heap_data->size)
-				pr_info("ION heap %s created at %pa with size %zx\n",
-					heap_data->name,
-					&heap_data->base,
-					heap_data->size);
-			else
-				pr_info("ION heap %s created\n",
-					heap_data->name);
 		}
 
 		ion_device_add_heap(new_dev, heaps[i]);
