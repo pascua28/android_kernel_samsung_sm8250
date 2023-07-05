@@ -2302,4 +2302,3 @@ config ARCH_HAS_SYSCALL_WRAPPER
 
 source "init/Kconfig.gki"
 source "kernel/Kconfig.intelligence"
-source "kernel/ftt/Kconfig"
