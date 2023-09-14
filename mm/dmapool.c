@@ -67,11 +67,18 @@ static DEFINE_MUTEX(pools_reg_lock);
 static ssize_t
 show_pools(struct device *dev, struct device_attribute *attr, char *buf)
 {
-	int size;
+	unsigned temp;
+	unsigned size;
+	char *next;
 	struct dma_page *page;
 	struct dma_pool *pool;
 
-	size = sysfs_emit(buf, "poolinfo - 0.1\n");
+	next = buf;
+	size = PAGE_SIZE;
+
+	temp = scnprintf(next, size, "poolinfo - 0.1\n");
+	size -= temp;
+	next += temp;
 
 	mutex_lock(&pools_lock);
 	list_for_each_entry(pool, &dev->dma_pools, pools) {
@@ -86,14 +93,16 @@ show_pools(struct device *dev, struct device_attribute *attr, char *buf)
 		spin_unlock_irq(&pool->lock);
 
 		/* per-pool info, no real statistics yet */
-		size += sysfs_emit_at(buf, size, "%-16s %4u %4zu %4zu %2u\n",
-				      pool->name, blocks,
-				      pages * (pool->allocation / pool->size),
-				      pool->size, pages);
+		temp = scnprintf(next, size, "%-16s %4u %4zu %4zu %2u\n",
+				 pool->name, blocks,
+				 pages * (pool->allocation / pool->size),
+				 pool->size, pages);
+		size -= temp;
+		next += temp;
 	}
 	mutex_unlock(&pools_lock);
 
-	return size;
+	return PAGE_SIZE - size;
 }
 
 static DEVICE_ATTR(pools, 0444, show_pools, NULL);
