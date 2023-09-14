@@ -135,9 +135,6 @@ struct dma_pool *dma_pool_create(const char *name, struct device *dev,
 	size_t allocation;
 	bool empty = false;
 
-	if (!dev)
-		return NULL;
-
 	if (align == 0)
 		align = 1;
 	else if (align & (align - 1))
@@ -279,7 +276,7 @@ void dma_pool_destroy(struct dma_pool *pool)
 	mutex_lock(&pools_reg_lock);
 	mutex_lock(&pools_lock);
 	list_del(&pool->pools);
-	if (list_empty(&pool->dev->dma_pools))
+	if (pool->dev && list_empty(&pool->dev->dma_pools))
 		empty = true;
 	mutex_unlock(&pools_lock);
 	if (empty)
@@ -288,8 +285,12 @@ void dma_pool_destroy(struct dma_pool *pool)
 
 	list_for_each_entry_safe(page, tmp, &pool->page_list, page_list) {
 		if (is_page_busy(page)) {
-			dev_err(pool->dev, "%s %s, %p busy\n", __func__,
-				pool->name, page->vaddr);
+			if (pool->dev)
+				dev_err(pool->dev, "%s %s, %p busy\n", __func__,
+					pool->name, page->vaddr);
+			else
+				pr_err("%s %s, %p busy\n", __func__,
+				       pool->name, page->vaddr);
 			/* leak the still-in-use consistent memory */
 			list_del(&page->page_list);
 			kfree(page);
@@ -351,8 +352,12 @@ void *dma_pool_alloc(struct dma_pool *pool, gfp_t mem_flags,
 		for (i = sizeof(page->offset); i < pool->size; i++) {
 			if (data[i] == POOL_POISON_FREED)
 				continue;
-			dev_err(pool->dev, "%s %s, %p (corrupted)\n",
-				__func__, pool->name, retval);
+			if (pool->dev)
+				dev_err(pool->dev, "%s %s, %p (corrupted)\n",
+					__func__, pool->name, retval);
+			else
+				pr_err("%s %s, %p (corrupted)\n",
+					__func__, pool->name, retval);
 
 			/*
 			 * Dump the first 4 bytes even if they are not
@@ -407,8 +412,12 @@ void dma_pool_free(struct dma_pool *pool, void *vaddr, dma_addr_t dma)
 	page = pool_find_page(pool, dma);
 	if (!page) {
 		spin_unlock_irqrestore(&pool->lock, flags);
-		dev_err(pool->dev, "%s %s, %p/%pad (bad dma)\n",
-			__func__, pool->name, vaddr, &dma);
+		if (pool->dev)
+			dev_err(pool->dev, "%s %s, %p/%pad (bad dma)\n",
+				__func__, pool->name, vaddr, &dma);
+		else
+			pr_err("%s %s, %p/%pad (bad dma)\n",
+			       __func__, pool->name, vaddr, &dma);
 		return;
 	}
 
@@ -418,8 +427,12 @@ void dma_pool_free(struct dma_pool *pool, void *vaddr, dma_addr_t dma)
 #ifdef	DMAPOOL_DEBUG
 	if ((dma - page->dma) != offset) {
 		spin_unlock_irqrestore(&pool->lock, flags);
-		dev_err(pool->dev, "%s %s, %p (bad vaddr)/%pad\n",
-			__func__, pool->name, vaddr, &dma);
+		if (pool->dev)
+			dev_err(pool->dev, "%s %s, %p (bad vaddr)/%pad\n",
+				__func__, pool->name, vaddr, &dma);
+		else
+			pr_err("%s %s, %p (bad vaddr)/%pad\n",
+			       __func__, pool->name, vaddr, &dma);
 		return;
 	}
 	{
@@ -430,8 +443,12 @@ void dma_pool_free(struct dma_pool *pool, void *vaddr, dma_addr_t dma)
 				continue;
 			}
 			spin_unlock_irqrestore(&pool->lock, flags);
-			dev_err(pool->dev, "%s %s, dma %pad already free\n",
-				__func__, pool->name, &dma);
+			if (pool->dev)
+				dev_err(pool->dev, "%s %s, dma %pad already free\n",
+					__func__, pool->name, &dma);
+			else
+				pr_err("%s %s, dma %pad already free\n",
+				       __func__, pool->name, &dma);
 			return;
 		}
 	}
