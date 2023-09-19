@@ -31,12 +31,6 @@ echo "
 "
 fi
 
-echo "**********************************"
-echo "Select load-tracking variant"
-echo "(1) WALT"
-echo "(2) PELT"
-read -p "Selected variant: " variant
-
 make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 $COMPILER_ENV \
 	r8q_defconfig > /dev/null 2>&1
 
@@ -64,29 +58,6 @@ CONFIG_HAVE_ARCH_PREL32_RELOCATIONS
 
 	esac
 done
-
-if [ $variant == "1" ]; then
-    echo "
-Compiling WALT variant
-"
-
-elif [ $variant == "2" ]; then
-    echo "
-Compiling PELT variant
-"
-    scripts/configcleaner "
-CONFIG_SCHED_WALT
-CONFIG_CFS_BANDWIDTH
-CONFIG_PERF_MGR
-"
-
-    echo "
-# CONFIG_SCHED_WALT is not set
-# CONFIG_CFS_BANDWIDTH is not set
-# CONFIG_PERF_MGR is not set
-" >> out/.config
-
-fi
 
 make -j8 -C $(pwd) O=$(pwd)/out $KERNEL_MAKE_ENV ARCH=arm64 $COMPILER_ENV \
 	oldconfig
