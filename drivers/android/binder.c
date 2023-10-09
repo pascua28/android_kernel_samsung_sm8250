@@ -6302,6 +6302,7 @@ static void binder_in_transaction(struct binder_proc *proc, int uid)
 }
 #endif
 
+#ifdef CONFIG_SAMSUNG_FREECESS
 void binders_in_transcation(int uid)
 {
 	struct binder_proc *itr;
@@ -6314,6 +6315,7 @@ void binders_in_transcation(int uid)
 	}
 	mutex_unlock(&binder_procs_lock);
 }
+#endif
 
 #ifdef CONFIG_ANDROID_BINDER_LOGS
 static const char * const binder_objstat_strings[] = {
