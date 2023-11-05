@@ -98,15 +98,6 @@
 #define SCHED_FEAT_FIND_BEST_TARGET 1
 
 /*
- * Energy aware scheduling algorithm choices:
- * EAS_PREFER_IDLE
- *   Direct tasks in a schedtune.prefer_idle=1 group through
- *   the EAS path for wakeup task placement. Otherwise, put
- *   those tasks through the mainline slow path.
- */
-#define SCHED_FEAT_EAS_PREFER_IDLE 0
-
-/*
  * Request max frequency from schedutil whenever a RT task is running.
  */
 #define SCHED_FEAT_SUGOV_RT_MAX_FREQ 0
