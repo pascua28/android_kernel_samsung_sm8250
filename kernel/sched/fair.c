@@ -8386,8 +8386,14 @@ select_task_rq_fair(struct task_struct *p, int prev_cpu, int sd_flag, int wake_f
 
 		record_wakee(p);
 
+#ifdef CONFIG_SCHED_WALT
 		want_affine = !wake_wide(p, sibling_count_hint) && !_wake_cap &&
 			      _cpus_allowed;
+#else
+		want_affine = !wake_wide(p, 1) &&
+			      !wake_cap(p, cpu, prev_cpu) &&
+			      cpumask_test_cpu(cpu, &p->cpus_allowed);
+#endif
 	}
 
 	rcu_read_lock();
