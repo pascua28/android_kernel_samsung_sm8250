@@ -1831,6 +1831,7 @@ static struct task_struct *pick_highest_pushable_task(struct rq *rq, int cpu)
 
 static DEFINE_PER_CPU(cpumask_var_t, local_cpu_mask);
 
+#ifdef CONFIG_SCHED_WALT
 static int rt_energy_aware_wake_cpu(struct task_struct *task)
 {
 	struct sched_domain *sd;
@@ -1956,6 +1957,12 @@ unlock:
 	rcu_read_unlock();
 	return best_cpu;
 }
+#else
+static inline int rt_energy_aware_wake_cpu(struct task_struct *task)
+{
+	return -1;
+}
+#endif
 
 static int find_lowest_rq(struct task_struct *task)
 {

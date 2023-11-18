@@ -404,13 +404,14 @@ void wake_q_add(struct wake_q_head *head, struct task_struct *task)
 	if (cmpxchg_relaxed(&node->next, NULL, WAKE_Q_TAIL))
 		return;
 
-	head->count++;
-
 	get_task_struct(task);
 
 	/*
 	 * The head is context local, there can be no concurrency.
 	 */
+#ifdef CONFIG_SCHED_WALT
+	head->count++;
+#endif
 	*head->lastp = node;
 	head->lastp = &node->next;
 }
@@ -436,7 +437,11 @@ void wake_up_q(struct wake_q_head *head)
 		 * try_to_wake_up() executes a full barrier, which pairs with
 		 * the queueing in wake_q_add() so as not to miss wakeups.
 		 */
+#ifdef CONFIG_SCHED_WALT
 		try_to_wake_up(task, TASK_NORMAL, 0, head->count);
+#else
+		try_to_wake_up(task, TASK_NORMAL, 0, 1);
+#endif
 		put_task_struct(task);
 	}
 }
@@ -1515,8 +1520,10 @@ void activate_task(struct rq *rq, struct task_struct *p, int flags)
 
 void deactivate_task(struct rq *rq, struct task_struct *p, int flags)
 {
+#ifdef CONFIG_SCHED_WALT
 	if (flags & DEQUEUE_SLEEP)
 		clear_ed_task(p, rq);
+#endif
 
 	dequeue_task(rq, p, flags);
 }
@@ -3141,11 +3148,11 @@ static void __sched_fork(unsigned long clone_flags, struct task_struct *p)
 	p->se.prev_sum_exec_runtime	= 0;
 	p->se.nr_migrations		= 0;
 	p->se.vruntime			= 0;
+#ifdef CONFIG_SCHED_WALT
 	p->last_sleep_ts		= 0;
 	p->boost			= 0;
 	p->boost_expires		= 0;
 	p->boost_period			= 0;
-#ifdef CONFIG_SCHED_WALT
 	p->low_latency			= 0;
 #endif
 	INIT_LIST_HEAD(&p->se.group_node);
@@ -4579,8 +4586,10 @@ static void __sched notrace __schedule(bool preempt)
 
 	wallclock = sched_ktime_clock();
 	if (likely(prev != next)) {
+#ifdef CONFIG_SCHED_WALT
 		if (!prev->on_rq)
 			prev->last_sleep_ts = wallclock;
+#endif
 
 		update_task_ravg(prev, rq, PUT_PREV_TASK, wallclock, 0);
 		update_task_ravg(next, rq, PICK_NEXT_TASK, wallclock, 0);
@@ -9055,6 +9064,7 @@ const u32 sched_prio_to_wmult[40] = {
 
 #undef CREATE_TRACE_POINTS
 
+#ifdef CONFIG_SCHED_WALT
 /*
  *@boost:should be 0,1,2.
  *@period:boost time based on ms units.
@@ -9076,7 +9086,6 @@ int set_task_boost(int boost, u64 period)
 }
 EXPORT_SYMBOL_GPL(set_task_boost);
 
-#ifdef CONFIG_SCHED_WALT
 /*
  * sched_exit() - Set EXITING_TASK_MARKER in task's ravg.demand field
  *

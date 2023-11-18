@@ -4050,6 +4050,25 @@ static inline bool task_fits_max(struct task_struct *p, int cpu)
 	return task_fits_capacity(p, capacity, cpu);
 }
 
+static inline void update_misfit_status(struct task_struct *p, struct rq *rq)
+{
+	if (!static_branch_unlikely(&sched_asym_cpucapacity))
+		return;
+
+	if (!p || p->nr_cpus_allowed == 1) {
+		rq->misfit_task_load = 0;
+		return;
+	}
+
+	if (task_fits_max(p, cpu_of(rq))) {
+		rq->misfit_task_load = 0;
+		return;
+	}
+
+	rq->misfit_task_load = task_h_load(p);
+}
+
+#ifdef CONFIG_SCHED_WALT
 static inline bool task_demand_fits(struct task_struct *p, int cpu)
 {
 	unsigned long capacity = capacity_orig_of(cpu);
@@ -4120,25 +4139,7 @@ static inline void adjust_cpus_for_packing(struct task_struct *p,
 	if (fbt_env->is_rtg)
 		*best_idle_cpu = -1;
 }
-
-static inline void update_misfit_status(struct task_struct *p, struct rq *rq)
-{
-	if (!p) {
-		rq->misfit_task_load = 0;
-		return;
-	}
-
-	if (task_fits_max(p, cpu_of(rq))) {
-		rq->misfit_task_load = 0;
-		return;
-	}
-
-	/*
-	 * Make sure that misfit_task_load will not be null even if
-	 * task_h_load() returns 0.
-	 */
-	rq->misfit_task_load = max_t(unsigned long, task_h_load(p), 1);
-}
+#endif
 
 #else /* CONFIG_SMP */
 
@@ -7218,6 +7219,7 @@ static inline bool is_many_wakeup(int sibling_count_hint)
 }
 #endif
 
+#ifdef CONFIG_SCHED_WALT
 static int get_start_cpu(struct task_struct *p, bool sync_boost)
 {
 	struct root_domain *rd = cpu_rq(smp_processor_id())->rd;
@@ -7775,6 +7777,7 @@ out:
 				     most_spare_cap_cpu,
 				     target_cpu, backup_cpu);
 }
+#endif
 
 /*
  * Predicts what cpu_util(@cpu) would return if @p was migrated (and enqueued)
@@ -7918,6 +7921,7 @@ compute_energy(struct task_struct *p, int dst_cpu, struct perf_domain *pd)
 	return em_cpu_energy(pd->em_pd, max_util, sum_util);
 }
 
+#ifdef CONFIG_SCHED_WALT
 static void select_cpu_candidates(struct sched_domain *sd, cpumask_t *cpus,
 		struct perf_domain *pd, struct task_struct *p, int prev_cpu)
 {
@@ -8005,6 +8009,7 @@ static void select_cpu_candidates(struct sched_domain *sd, cpumask_t *cpus,
 	else
 		cpumask_set_cpu(highest_spare_cap_cpu, cpus);
 }
+#endif
 
 static inline int wake_to_idle(struct task_struct *p)
 {
@@ -11138,7 +11143,9 @@ static int group_balance_cpu_not_isolated(struct sched_group *sg)
 	cpumask_t cpus;
 
 	cpumask_and(&cpus, sched_group_span(sg), group_balance_mask(sg));
+#ifdef CONFIG_SCHED_WALT
 	cpumask_andnot(&cpus, &cpus, cpu_isolated_mask);
+#endif
 	return cpumask_first(&cpus);
 }
 
