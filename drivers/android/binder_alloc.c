@@ -24,7 +24,6 @@
 #include <linux/highmem.h>
 #include <linux/sizes.h>
 #include "binder_alloc.h"
-#include "binder_trace.h"
 
 struct list_lru binder_freelist;
 
@@ -201,8 +200,6 @@ static void binder_lru_freelist_add(struct binder_alloc *alloc,
 	struct binder_lru_page *page;
 	unsigned long page_addr;
 
-	trace_binder_update_page_range(alloc, false, start, end);
-
 	for (page_addr = start; page_addr < end; page_addr += PAGE_SIZE) {
 		size_t index;
 		int ret;
@@ -213,12 +210,8 @@ static void binder_lru_freelist_add(struct binder_alloc *alloc,
 		if (!binder_get_installed_page(page))
 			continue;
 
-		trace_binder_free_lru_start(alloc, index);
-
 		ret = list_lru_add(&binder_freelist, &page->lru);
 		WARN_ON(!ret);
-
-		trace_binder_free_lru_end(alloc, index);
 	}
 }
 
@@ -291,13 +284,9 @@ static int binder_install_buffer_pages(struct binder_alloc *alloc,
 		if (binder_get_installed_page(page))
 			continue;
 
-		trace_binder_alloc_page_start(alloc, index);
-
 		ret = binder_install_single_page(alloc, page, page_addr);
 		if (ret)
 			return ret;
-
-		trace_binder_alloc_page_end(alloc, index);
 	}
 
 	return 0;
@@ -310,8 +299,6 @@ static void binder_lru_freelist_del(struct binder_alloc *alloc,
 	struct binder_lru_page *page;
 	unsigned long page_addr;
 
-	trace_binder_update_page_range(alloc, true, start, end);
-
 	for (page_addr = start; page_addr < end; page_addr += PAGE_SIZE) {
 		unsigned long index;
 		bool on_lru;
@@ -320,12 +307,9 @@ static void binder_lru_freelist_del(struct binder_alloc *alloc,
 		page = &alloc->pages[index];
 
 		if (page->page_ptr) {
-			trace_binder_alloc_lru_start(alloc, index);
-
 			on_lru = list_lru_del(&binder_freelist, &page->lru);
 			WARN_ON(!on_lru);
 
-			trace_binder_alloc_lru_end(alloc, index);
 			continue;
 		}
 
@@ -1102,24 +1086,15 @@ enum lru_status binder_alloc_free_page(struct list_head *item,
 	if (vma && vma != binder_alloc_get_vma(alloc))
 		goto err_invalid_vma;
 
-	trace_binder_unmap_kernel_start(alloc, index);
-
 	page_to_free = page->page_ptr;
 	page->page_ptr = NULL;
-
-	trace_binder_unmap_kernel_end(alloc, index);
 
 	list_lru_isolate(lru, item);
 	spin_unlock(&alloc->lock);
 	spin_unlock(lock);
 
-	if (vma) {
-		trace_binder_unmap_user_start(alloc, index);
-
+	if (vma)
 		zap_page_range(vma, page_addr, PAGE_SIZE);
-
-		trace_binder_unmap_user_end(alloc, index);
-	}
 
 	up_read(&mm->mmap_sem);
 	mmput_async(mm);
