@@ -149,7 +149,9 @@ void panic(const char *fmt, ...)
 
 	sec_debug_store_extc_idx(false);
 	/*To prevent watchdog reset during panic handling. */
+#ifdef CONFIG_QCOM_WATCHDOG_V2
 	emerg_pet_watchdog();
+#endif
 
 	/*
 	 * Disable local interrupts. This will prevent panic_smp_self_stop
