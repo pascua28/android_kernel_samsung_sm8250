@@ -731,7 +731,7 @@ boost_write(struct cgroup_subsys_state *css, struct cftype *cft,
 static int sched_boost_override_write_wrapper(struct cgroup_subsys_state *css,
 					      struct cftype *cft, u64 override)
 {
-	if (task_is_booster(current))
+	if (task_is_booster())
 		return 0;
 
 	return sched_boost_override_write(css, cft, override);
@@ -740,7 +740,7 @@ static int sched_boost_override_write_wrapper(struct cgroup_subsys_state *css,
 static int sched_colocate_write_wrapper(struct cgroup_subsys_state *css,
 					struct cftype *cft, u64 colocate)
 {
-	if (task_is_booster(current))
+	if (task_is_booster())
 		return 0;
 
 	return sched_colocate_write(css, cft, colocate);
@@ -750,7 +750,7 @@ static int sched_colocate_write_wrapper(struct cgroup_subsys_state *css,
 static int boost_write_wrapper(struct cgroup_subsys_state *css,
 			       struct cftype *cft, s64 boost)
 {
-	if (task_is_booster(current))
+	if (task_is_booster())
 		return 0;
 
 	return boost_write(css, cft, boost);
@@ -759,7 +759,7 @@ static int boost_write_wrapper(struct cgroup_subsys_state *css,
 static int prefer_idle_write_wrapper(struct cgroup_subsys_state *css,
 				     struct cftype *cft, u64 prefer_idle)
 {
-	if (task_is_booster(current))
+	if (task_is_booster())
 		return 0;
 
 	return prefer_idle_write(css, cft, prefer_idle);

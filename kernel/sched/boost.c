@@ -271,7 +271,7 @@ int sched_boost_handler(struct ctl_table *table, int write,
 	int ret;
 	unsigned int *data = (unsigned int *)table->data;
 
-	if (task_is_booster(current))
+	if (task_is_booster())
 		return 0;
 
 	mutex_lock(&boost_mutex);
