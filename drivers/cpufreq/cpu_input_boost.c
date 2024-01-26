@@ -20,7 +20,7 @@
 #include <uapi/linux/sched/types.h>
 #endif
 
-static unsigned int dynamic_stune_boost __read_mostly = 10;
+static unsigned int dynamic_stune_boost __read_mostly = 20;
 
 static unsigned int max_boost_freq_little __read_mostly =
 	CONFIG_MAX_BOOST_FREQ_LP;
