@@ -2495,7 +2495,7 @@ void scheduler_ipi(void)
  * via sched_ttwu_wakeup() for activation so the wakee incurs the cost
  * of the wakeup instead of the waker.
  */
-static void __ttwu_queue_wakelist(struct task_struct *p, int cpu, int wake_flags)
+static void __ttwu_queue_remote(struct task_struct *p, int cpu, int wake_flags)
 {
 	struct rq *rq = cpu_rq(cpu);
 
@@ -2543,32 +2543,11 @@ bool cpus_share_cache(int this_cpu, int that_cpu)
 }
 
 #if SCHED_FEAT_TTWU_QUEUE
-static inline bool ttwu_queue_cond(int cpu, int wake_flags)
+static bool ttwu_queue_remote(struct task_struct *p, int cpu, int wake_flags)
 {
-	/*
-	 * If the CPU does not share cache, then queue the task on the
-	 * remote rqs wakelist to avoid accessing remote data.
-	 */
-	if (!cpus_share_cache(smp_processor_id(), cpu))
-		return true;
-
-	/*
-	 * If the task is descheduling and the only running task on the
-	 * CPU then use the wakelist to offload the task activation to
-	 * the soon-to-be-idle CPU as the current CPU is likely busy.
-	 * nr_running is checked to avoid unnecessary task stacking.
-	 */
-	if ((wake_flags & WF_ON_RQ) && cpu_rq(cpu)->nr_running <= 1)
-		return true;
-
-	return false;
-}
-
-static bool ttwu_queue_wakelist(struct task_struct *p, int cpu, int wake_flags)
-{
-	if (sched_feat(TTWU_QUEUE) && ttwu_queue_cond(cpu, wake_flags)) {
+	if (sched_feat(TTWU_QUEUE) && !cpus_share_cache(smp_processor_id(), cpu)) {
 		sched_clock_cpu(cpu); /* Sync clocks across CPUs */
-		__ttwu_queue_wakelist(p, cpu, wake_flags);
+		__ttwu_queue_remote(p, cpu, wake_flags);
 		return true;
 	}
 
@@ -2584,7 +2563,7 @@ static void ttwu_queue(struct task_struct *p, int cpu, int wake_flags)
 
 #if defined(CONFIG_SMP)
 #if SCHED_FEAT_TTWU_QUEUE
-	if (ttwu_queue_wakelist(p, cpu, wake_flags))
+	if (ttwu_queue_remote(p, cpu, wake_flags))
 		return;
 #endif
 #endif
@@ -2842,7 +2821,7 @@ try_to_wake_up(struct task_struct *p, unsigned int state, int wake_flags,
 	 * let the waker make forward progress. This is safe because IRQs are
 	 * disabled and the IPI will deliver after on_cpu is cleared.
 	 */
-	if (READ_ONCE(p->on_cpu) && ttwu_queue_wakelist(p, cpu, wake_flags | WF_ON_RQ))
+	if (READ_ONCE(p->on_cpu) && ttwu_queue_remote(p, cpu, wake_flags))
 		goto unlock;
 #endif
 
