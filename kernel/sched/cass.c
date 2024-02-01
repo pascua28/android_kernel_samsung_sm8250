@@ -54,8 +54,8 @@ bool cass_cpu_better(const struct cass_cpu_cand *a,
 #define cass_cmp(a, b) ({ res = (a) - (b); })
 #define cass_eq(a, b) ({ res = (a) == (b); })
 	long res;
-	bool boost = uclamp_boosted(p);
-	bool latency_sensitive = uclamp_latency_sensitive(p);
+	int boost = schedtune_task_boost(p);
+	int latency_sensitive = schedtune_prefer_idle(p);
 
 	/* Prefer the CPU with higher cap and lower utilization */
 	if (boost && cass_cmp_r(a->cap - a->raw_util, b->cap - b->raw_util, 64))
