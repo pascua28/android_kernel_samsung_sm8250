@@ -3084,6 +3084,13 @@ static ssize_t disksize_store(struct device *dev,
 	if (!disksize)
 		return -EINVAL;
 
+	if (disksize > totalram_pages() * PAGE_SIZE) {
+		if (totalram_pages() * PAGE_SIZE / 1024 < 7097160)
+			disksize = (u64)6 * SZ_1G;
+		else
+			disksize = (u64)8 * SZ_1G;
+	}
+
 	down_write(&zram->init_lock);
 	if (init_done(zram)) {
 		pr_info("Cannot change disksize for initialized device\n");
