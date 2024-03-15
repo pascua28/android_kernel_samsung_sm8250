@@ -527,7 +527,7 @@ struct sched_entity {
 	unsigned long			runnable_weight;
 	struct rb_node			run_node;
 	u64				deadline;
-	u64				min_vruntime;
+	u64				min_deadline;
 
 	struct list_head		group_node;
 	unsigned int			on_rq;
