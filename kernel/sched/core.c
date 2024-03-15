@@ -2983,7 +2983,7 @@ out:
 
 /**
  * try_invoke_on_locked_down_task - Invoke a function on task in fixed state
- * @p: Process for which the function is to be invoked, can be @current.
+ * @p: Process for which the function is to be invoked.
  * @func: Function to invoke.
  * @arg: Argument to function.
  *
@@ -3001,12 +3001,12 @@ out:
  */
 bool try_invoke_on_locked_down_task(struct task_struct *p, bool (*func)(struct task_struct *t, void *arg), void *arg)
 {
-	struct rq_flags rf;
 	bool ret = false;
+	struct rq_flags rf;
 	struct rq *rq;
 
-
-	raw_spin_lock_irqsave(&p->pi_lock, rf.flags);
+	lockdep_assert_irqs_enabled();
+	raw_spin_lock_irq(&p->pi_lock);
 	if (p->on_rq) {
 		rq = __task_rq_lock(p, &rf);
 		if (task_rq(p) == rq)
@@ -3023,7 +3023,7 @@ bool try_invoke_on_locked_down_task(struct task_struct *p, bool (*func)(struct t
 				ret = func(p, arg);
 		}
 	}
-	raw_spin_unlock_irqrestore(&p->pi_lock, rf.flags);
+	raw_spin_unlock_irq(&p->pi_lock);
 	return ret;
 }
 
