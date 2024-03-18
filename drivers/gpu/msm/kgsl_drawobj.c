@@ -45,14 +45,7 @@ static void syncobj_destroy_object(struct kgsl_drawobj *drawobj)
 	for (i = 0; i < syncobj->numsyncs; i++) {
 		struct kgsl_drawobj_sync_event *event = &syncobj->synclist[i];
 
-		if (event->type == KGSL_CMD_SYNCPOINT_TYPE_FENCE) {
-			struct event_fence_info *priv = event->priv;
-
-			if (priv) {
-				kfree(priv->fences);
-				kfree(priv);
-			}
-		} else if (event->type == KGSL_CMD_SYNCPOINT_TYPE_TIMELINE) {
+		if (event->type == KGSL_CMD_SYNCPOINT_TYPE_TIMELINE) {
 			kfree(event->priv);
 		}
 	}
@@ -115,6 +108,16 @@ void kgsl_dump_syncpoints(struct kgsl_device *device,
 			break;
 		}
 		case KGSL_CMD_SYNCPOINT_TYPE_TIMELINE: {
+			int j;
+			struct event_timeline_info *info = event->priv;
+
+			dev_err(device->dev, "       [%u] FENCE %s\n",
+				i, dma_fence_is_signaled(event->fence) ?
+					"signaled" : "not signaled");
+
+			for (j = 0; info && info[j].timeline; j++)
+				dev_err(device->dev, "       TIMELINE %d SEQNO %lld\n",
+					info[j].timeline, info[j].seqno);
 			break;
 		}
 		}
@@ -502,8 +505,7 @@ static int drawobj_add_sync_fence(struct kgsl_device *device,
 	struct kgsl_cmd_syncpoint_fence sync;
 	struct kgsl_drawobj *drawobj = DRAWOBJ(syncobj);
 	struct kgsl_drawobj_sync_event *event;
-	struct event_fence_info *priv;
-	unsigned int id, i;
+	unsigned int id;
 
 	if (copy_struct_from_user(&sync, sizeof(sync), data, datasize))
 		return -EFAULT;
@@ -520,14 +522,10 @@ static int drawobj_add_sync_fence(struct kgsl_device *device,
 	event->device = device;
 	event->context = NULL;
 
-	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
-
 	set_bit(event->id, &syncobj->pending);
 
 	event->handle = kgsl_sync_fence_async_wait(sync.fd,
 				drawobj_sync_fence_func, event);
-
-	event->priv = priv;
 
 	if (IS_ERR_OR_NULL(event->handle)) {
 		int ret = PTR_ERR(event->handle);
@@ -546,9 +544,6 @@ static int drawobj_add_sync_fence(struct kgsl_device *device,
 
 		return ret;
 	}
-
-	for (i = 0; priv && i < priv->num_fences; i++)
-		trace_syncpoint_fence(syncobj, priv->fences[i].name);
 
 	return 0;
 }
