@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (c) 2016-2020, The Linux Foundation. All rights reserved. */
+/* Copyright (c) 2016-2021, The Linux Foundation. All rights reserved. */
 
 #include <linux/delay.h>
 #include <linux/jiffies.h>
@@ -45,6 +45,7 @@
 #define CNSS_QMI_TIMEOUT_DEFAULT	10000
 #define CNSS_BDF_TYPE_DEFAULT		CNSS_BDF_ELF
 #define CNSS_TIME_SYNC_PERIOD_DEFAULT	900000
+#define CNSS_MIN_TIME_SYNC_PERIOD	2000
 
 static struct cnss_plat_data *plat_env;
 
@@ -364,6 +365,24 @@ int cnss_set_fw_log_mode(struct device *dev, u8 fw_log_mode)
 }
 EXPORT_SYMBOL(cnss_set_fw_log_mode);
 
+int cnss_set_pcie_gen_speed(struct device *dev, u8 pcie_gen_speed)
+{
+	struct cnss_plat_data *plat_priv = cnss_bus_dev_to_plat_priv(dev);
+
+	if (plat_priv->device_id != QCA6490_DEVICE_ID ||
+	    !plat_priv->fw_pcie_gen_switch)
+		return -ENOTSUPP;
+
+	if (pcie_gen_speed < QMI_PCIE_GEN_SPEED_1_V01 ||
+	    pcie_gen_speed > QMI_PCIE_GEN_SPEED_3_V01)
+		return -EINVAL;
+
+	cnss_pr_dbg("WLAN provided PCIE gen speed: %d\n", pcie_gen_speed);
+	plat_priv->pcie_gen_speed = pcie_gen_speed;
+	return 0;
+}
+EXPORT_SYMBOL(cnss_set_pcie_gen_speed);
+
 static int cnss_fw_mem_ready_hdlr(struct cnss_plat_data *plat_priv)
 {
 	int ret = 0;
@@ -439,6 +458,8 @@ static int cnss_fw_ready_hdlr(struct cnss_plat_data *plat_priv)
 	del_timer(&plat_priv->fw_boot_timer);
 	set_bit(CNSS_FW_READY, &plat_priv->driver_state);
 	clear_bit(CNSS_DEV_ERR_NOTIFY, &plat_priv->driver_state);
+
+	cnss_wlfw_send_pcie_gen_speed_sync(plat_priv);
 
 	if (test_bit(CNSS_FW_BOOT_RECOVERY, &plat_priv->driver_state)) {
 		clear_bit(CNSS_FW_BOOT_RECOVERY, &plat_priv->driver_state);
@@ -704,6 +725,14 @@ int cnss_idle_restart(struct device *dev)
 	ret = wait_for_completion_timeout(&plat_priv->power_up_complete,
 					  msecs_to_jiffies((timeout << 1) +
 							   WLAN_WD_TIMEOUT_MS));
+	if (plat_priv->power_up_error) {
+		ret = plat_priv->power_up_error;
+		clear_bit(CNSS_DRIVER_IDLE_RESTART, &plat_priv->driver_state);
+		cnss_pr_dbg("Power up error:%d, exiting\n",
+			    plat_priv->power_up_error);
+		goto out;
+	}
+
 	if (!ret) {
 		cnss_pr_err("Timeout waiting for idle restart to complete\n");
 		ret = -ETIMEDOUT;
@@ -729,6 +758,7 @@ EXPORT_SYMBOL(cnss_idle_restart);
 int cnss_idle_shutdown(struct device *dev)
 {
 	struct cnss_plat_data *plat_priv = cnss_bus_dev_to_plat_priv(dev);
+	unsigned int timeout;
 	int ret;
 
 	if (!plat_priv) {
@@ -1189,7 +1219,7 @@ void cnss_schedule_recovery(struct device *dev,
 }
 EXPORT_SYMBOL(cnss_schedule_recovery);
 
-int cnss_force_fw_assert(struct device *dev)
+int cnss_force_fw_assert_async(struct device *dev)
 {
 	struct cnss_plat_data *plat_priv = cnss_bus_dev_to_plat_priv(dev);
 
@@ -1213,7 +1243,44 @@ int cnss_force_fw_assert(struct device *dev)
 		return 0;
 	}
 
-	if (in_interrupt() || irqs_disabled())
+	cnss_pr_info("Force assert (async)\n");
+
+	cnss_driver_event_post(plat_priv,
+			       CNSS_DRIVER_EVENT_FORCE_FW_ASSERT,
+			       0, NULL);
+
+	return 0;
+}
+EXPORT_SYMBOL(cnss_force_fw_assert_async);
+
+int cnss_force_fw_assert(struct device *dev)
+{
+	struct cnss_plat_data *plat_priv = cnss_bus_dev_to_plat_priv(dev);
+    bool post = (in_interrupt() || irqs_disabled());
+
+	if (!plat_priv) {
+		cnss_pr_err("plat_priv is NULL\n");
+		return -ENODEV;
+	}
+
+	if (plat_priv->device_id == QCA6174_DEVICE_ID) {
+		cnss_pr_info("Forced FW assert is not supported\n");
+		return -EOPNOTSUPP;
+	}
+
+	if (cnss_bus_is_device_down(plat_priv)) {
+		cnss_pr_info("Device is already in bad state, ignore force assert\n");
+		return 0;
+	}
+
+	if (test_bit(CNSS_DRIVER_RECOVERY, &plat_priv->driver_state)) {
+		cnss_pr_info("Recovery is already in progress, ignore forced FW assert\n");
+		return 0;
+	}
+
+	cnss_pr_info("Force assert (%s)\n", post ? "async" : "sync");
+
+	if (post)
 		cnss_driver_event_post(plat_priv,
 				       CNSS_DRIVER_EVENT_FORCE_FW_ASSERT,
 				       0, NULL);
@@ -1624,7 +1691,7 @@ int cnss_va_to_pa(struct device *dev, size_t size, void *va, dma_addr_t dma,
 
 	ret = dma_get_sgtable_attrs(dev, &sgt, va, dma, size, attrs);
 	if (ret) {
-		cnss_pr_err("Failed to get sgtable for va: 0x%pK, dma: %pa, size: 0x%zx, attrs: 0x%lx\n",
+		cnss_pr_err("Failed to get sgtable for va: 0x%pK, dma: %pa, size: 0x%zx, attrs: 0x%x\n",
 			    va, &dma, size, attrs);
 		return -EINVAL;
 	}
@@ -2146,7 +2213,7 @@ static ssize_t store_mac_addr(struct kobject *kobj,
 			    const char *buf,
 			    size_t count)
 {
-	sscanf(buf, "%02hhX:%02hhX:%02hhX:%02hhX:%02hhX:%02hhX",
+	sscanf(buf, "%02X:%02X:%02X:%02X:%02X:%02X",
 		(const u8*)&mac_from_macloader[0],
 		(const u8*)&mac_from_macloader[1],
 		(const u8*)&mac_from_macloader[2],
@@ -2239,7 +2306,7 @@ static ssize_t show_wificableinfo(struct kobject *kobj,
 	struct device_node *np;
 	int wifi_cable1 = 0;
 	int wifi_cable2 = 0;
-	char antbuffer[8] = {0};
+	char antbuffer[2] = {0};
 
 	np = of_find_compatible_node(NULL, NULL, "samsung,rome_cable");
 
@@ -2395,7 +2462,7 @@ static int cnss_reboot_notifier(struct notifier_block *nb,
 	del_timer(&plat_priv->fw_boot_timer);
 	complete_all(&plat_priv->power_up_complete);
 	complete_all(&plat_priv->cal_complete);
-	cnss_pr_dbg("Reboot is in progress with action %lu\n", action);
+	cnss_pr_dbg("Reboot is in progress with action %d\n", action);
 
 	return NOTIFY_DONE;
 }
@@ -2507,6 +2574,13 @@ cnss_use_nv_mac(struct cnss_plat_data *plat_priv)
 				     "use-nv-mac");
 }
 
+static inline int cnss_get_cal_duration(struct cnss_plat_data *plat_priv)
+{
+	return of_property_read_u32(plat_priv->plat_dev->dev.of_node,
+				    "qcom,cnss-cal-duration",
+				    &plat_priv->cal_duration);
+}
+
 static int cnss_probe(struct platform_device *plat_dev)
 {
 	int ret = 0;
@@ -2540,6 +2614,9 @@ static int cnss_probe(struct platform_device *plat_dev)
 	plat_priv->device_id = device_id->driver_data;
 	plat_priv->bus_type = cnss_get_bus_type(plat_priv->device_id);
 	plat_priv->use_nv_mac = cnss_use_nv_mac(plat_priv);
+	if (cnss_get_cal_duration(plat_priv) != 0)
+		plat_priv->cal_duration = CNSS_INVALID_CAL_DURATION;
+
 	plat_priv->use_fw_path_with_prefix =
 		cnss_use_fw_path_with_prefix(plat_priv);
 	cnss_set_plat_priv(plat_dev, plat_priv);
