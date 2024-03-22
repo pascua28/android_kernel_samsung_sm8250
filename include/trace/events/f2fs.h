@@ -840,7 +840,11 @@ TRACE_EVENT(f2fs_lookup_end,
 	TP_STRUCT__entry(
 		__field(dev_t,	dev)
 		__field(ino_t,	ino)
+<<<<<<< HEAD
 		__string(name, dentry->d_name.name)
+=======
+		__string(name,	dentry->d_name.name)
+>>>>>>> v4.19.218
 		__field(nid_t,	cino)
 		__field(int,	err)
 	),
