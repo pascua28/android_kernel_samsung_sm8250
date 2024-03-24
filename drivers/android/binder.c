@@ -80,20 +80,9 @@
 
 #include "binder_alloc.h"
 #include "binder_internal.h"
-#include "binder_trace.h"
 
 #ifdef CONFIG_SAMSUNG_FREECESS
 #include <linux/freecess.h>
-#endif
-
-#ifdef CONFIG_FAST_TRACK
-#include <cpu/ftt/ftt.h>
-
-#define MAX_FG_WORKS_PROCEEDED 2
-
-static uint8_t binder_enable_fg_switch = 1;
-static atomic64_t binder_work_seq;
-static atomic64_t binder_fg_req_num;
 #endif
 
 int system_server_pid = 0;
@@ -109,11 +98,14 @@ static HLIST_HEAD(binder_dead_nodes);
 static DEFINE_SPINLOCK(binder_dead_nodes_lock);
 
 static struct dentry *binder_debugfs_dir_entry_root;
-static struct dentry *binder_debugfs_dir_entry_proc;
 static atomic_t binder_last_id;
+
+#ifdef CONFIG_ANDROID_BINDER_LOGS
+static struct dentry *binder_debugfs_dir_entry_proc;
 
 static int proc_show(struct seq_file *m, void *unused);
 DEFINE_SHOW_ATTRIBUTE(proc);
+#endif
 
 /* This is only defined in include/asm-arm/sizes.h */
 #ifndef SZ_1K
@@ -143,9 +135,12 @@ enum {
 	BINDER_DEBUG_PRIORITY_CAP           = 1U << 13,
 	BINDER_DEBUG_SPINLOCKS              = 1U << 14,
 };
+
+#ifdef CONFIG_ANDROID_BINDER_LOGS
 static uint32_t binder_debug_mask = BINDER_DEBUG_USER_ERROR |
 	BINDER_DEBUG_FAILED_TRANSACTION | BINDER_DEBUG_DEAD_TRANSACTION;
 module_param_named(debug_mask, binder_debug_mask, uint, 0644);
+#endif
 
 char *binder_devices_param = CONFIG_ANDROID_BINDER_DEVICES;
 module_param_named(devices, binder_devices_param, charp, 0444);
@@ -166,6 +161,7 @@ static int binder_set_stop_on_user_error(const char *val,
 module_param_call(stop_on_user_error, binder_set_stop_on_user_error,
 	param_get_int, &binder_stop_on_user_error, 0644);
 
+#ifdef CONFIG_ANDROID_BINDER_LOGS
 #define binder_debug(mask, x...) \
 	do { \
 		if (binder_debug_mask & mask) \
@@ -179,6 +175,14 @@ module_param_call(stop_on_user_error, binder_set_stop_on_user_error,
 		if (binder_stop_on_user_error) \
 			binder_stop_on_user_error = 2; \
 	} while (0)
+#else
+static inline void binder_debug(uint32_t mask, const char *fmt, ...) {}
+static inline void binder_user_error(const char *fmt, ...)
+{
+	if (binder_stop_on_user_error)
+		binder_stop_on_user_error = 2;
+}
+#endif
 
 #define to_flat_binder_object(hdr) \
 	container_of(hdr, struct flat_binder_object, hdr)
@@ -209,6 +213,7 @@ struct binder_stats {
 	atomic_t obj_deleted[BINDER_STAT_COUNT];
 };
 
+#ifdef CONFIG_ANDROID_BINDER_LOGS
 static struct binder_stats binder_stats;
 
 static inline void binder_stats_deleted(enum binder_stat_types type)
@@ -243,6 +248,10 @@ static struct binder_transaction_log_entry *binder_transaction_log_add(
 	memset(e, 0, sizeof(*e));
 	return e;
 }
+#else
+static inline void binder_stats_deleted(enum binder_stat_types type) {}
+static inline void binder_stats_created(enum binder_stat_types type) {}
+#endif
 
 /**
  * struct binder_work - work enqueued on a worklist
@@ -263,10 +272,6 @@ struct binder_work {
 		BINDER_WORK_DEAD_BINDER_AND_CLEAR,
 		BINDER_WORK_CLEAR_DEATH_NOTIFICATION,
 	} type;
-
-#ifdef CONFIG_FAST_TRACK
-	uint64_t seq;
-#endif
 };
 
 struct binder_error {
@@ -536,10 +541,6 @@ struct binder_proc {
 	bool is_dead;
 
 	struct list_head todo;
-#ifdef CONFIG_FAST_TRACK
-	struct list_head fg_todo;
-	uint32_t fg_count;
-#endif
 	struct binder_stats stats;
 	struct list_head delivered_death;
 	int max_threads;
@@ -835,9 +836,6 @@ binder_enqueue_work_ilocked(struct binder_work *work,
 {
 	BUG_ON(target_list == NULL);
 	BUG_ON(work->entry.next && !list_empty(&work->entry));
-#ifdef CONFIG_FAST_TRACK
-	work->seq = (uint64_t)atomic64_inc_return(&binder_work_seq);
-#endif
 	list_add_tail(&work->entry, target_list);
 }
 
@@ -929,104 +927,6 @@ static struct binder_work *binder_dequeue_work_head_ilocked(
 	return w;
 }
 
-#ifdef CONFIG_FAST_TRACK
-static int binder_switch_show(struct seq_file *m, void *unused)
-{
-	seq_printf(m, "%u\n", binder_enable_fg_switch);
-	return 0;
-}
-
-static int binder_switch_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, binder_switch_show, inode->i_private);
-}
-
-static ssize_t binder_switch_write(struct file *file, const char __user *buffer,
-	size_t count, loff_t *pos)
-{
-	char enable;
-
-	if (count > 0) {
-		if (get_user(enable, buffer))
-			return -EFAULT;
-
-		if (enable == '0')
-			binder_enable_fg_switch = 0;
-		else if (enable == '1')
-			binder_enable_fg_switch = 1;
-		else if (enable == '2')
-			binder_enable_fg_switch = 2;
-		else
-			return -EINVAL;
-	}
-
-	return count;
-}
-
-static const struct file_operations binder_switch_fops = {
-	.owner = THIS_MODULE,
-	.open = binder_switch_open,
-	.read = seq_read,
-	.llseek = seq_lseek,
-	.release = single_release,
-	.write = binder_switch_write,
-};
-
-static inline bool binder_proc_worklist_empty_ilocked(struct binder_proc *proc)
-{
-	return binder_worklist_empty_ilocked(&proc->todo) &&
-		binder_worklist_empty_ilocked(&proc->fg_todo);
-}
-
-static inline struct list_head *binder_proc_select_worklist_ilocked(
-	struct binder_proc *proc)
-{
-	if (binder_worklist_empty_ilocked(&proc->fg_todo)) {
-		proc->fg_count = 0;
-		return &proc->todo;
-	}
-
-	if (proc->fg_count >= MAX_FG_WORKS_PROCEEDED) {
-		proc->fg_count = 0;
-
-		if (!binder_worklist_empty_ilocked(&proc->todo)) {
-			struct binder_work *fg_w;
-			struct binder_work *w;
-
-			fg_w = list_first_entry(&proc->fg_todo,
-				struct binder_work, entry);
-			w = list_first_entry(&proc->todo,
-				struct binder_work, entry);
-
-			if (w->seq < fg_w->seq)
-				return &proc->todo;
-		}
-	}
-
-	proc->fg_count++;
-	return &proc->fg_todo;
-}
-static inline int is_static_ftt(struct sched_entity *se)
-{
-	return se->ftt_mark;
-}
-
-static inline int ftt_binder_enqueue(struct binder_thread *thread,
-                                        struct binder_thread *from)
-{
-	if (from && is_ftt(&from->task->se) &&
-		!is_ftt(&thread->task->se) && binder_enable_fg_switch)
-		return dynamic_ftt_enqueue(thread->task, DYNAMIC_FTT_BINDER);
-	return -1;
-}
-
-static inline void ftt_binder_dequeue(struct binder_thread *thread)
-{
-	if (is_dyn_ftt(&thread->task->se, DYNAMIC_FTT_BINDER))
-		dynamic_ftt_dequeue(thread->task, DYNAMIC_FTT_BINDER);
-}
-#endif
-
 static void
 binder_defer_work(struct binder_proc *proc, enum binder_deferred_state defer);
 static void binder_free_thread(struct binder_thread *thread);
@@ -1099,11 +999,7 @@ static bool binder_has_work_ilocked(struct binder_thread *thread,
 	return thread->process_todo ||
 		thread->looper_need_return ||
 		(do_proc_work &&
-#ifdef CONFIG_FAST_TRACK
-		 !binder_proc_worklist_empty_ilocked(thread->proc));
-#else
 		 !binder_worklist_empty_ilocked(&thread->proc->todo));
-#endif
 }
 
 static bool binder_has_work(struct binder_thread *thread, bool do_proc_work)
@@ -1136,10 +1032,10 @@ static void binder_wakeup_poll_threads_ilocked(struct binder_proc *proc,
 		if (thread->looper & BINDER_LOOPER_STATE_POLL &&
 		    binder_available_for_proc_work_ilocked(thread)) {
 #ifdef CONFIG_SCHED_WALT
-			if (sync && thread->task && thread->task->signal &&
-				(thread->task->signal->oom_score_adj <= 0)) {
+			if (thread->task && current->signal &&
+				(current->signal->oom_score_adj == 0) &&
+				(current->prio < DEFAULT_PRIO))
 				thread->task->low_latency = true;
-			}
 #endif
 			if (sync)
 				wake_up_interruptible_sync(&thread->wait);
@@ -1201,8 +1097,9 @@ static void binder_wakeup_thread_ilocked(struct binder_proc *proc,
 
 	if (thread) {
 #ifdef CONFIG_SCHED_WALT
-		if (sync && thread->task && thread->task->signal &&
-			(thread->task->signal->oom_score_adj <= 0))
+		if (thread->task && current->signal &&
+			(current->signal->oom_score_adj == 0) &&
+			(current->prio < DEFAULT_PRIO))
 			thread->task->low_latency = true;
 #endif
 		if (sync)
@@ -1310,10 +1207,6 @@ static void binder_do_set_priority(struct task_struct *task,
 			     "%d: priority %d not allowed, using %d instead\n",
 			      task->pid, desired.prio,
 			      to_kernel_prio(policy, priority));
-
-	trace_binder_set_priority(task->tgid, task->pid, task->normal_prio,
-				  to_kernel_prio(policy, priority),
-				  desired.prio);
 
 	/* Set the actual priority */
 	if (task->policy != policy || is_rt_policy(policy)) {
@@ -2706,7 +2599,6 @@ static int binder_translate_binder(struct flat_binder_object *fp,
 	fp->handle = rdata.desc;
 	fp->cookie = 0;
 
-	trace_binder_transaction_node_to_ref(t, node, &rdata);
 	binder_debug(BINDER_DEBUG_TRANSACTION,
 		     "        node %d u%016llx -> ref %d desc %d\n",
 		     node->debug_id, (u64)node->ptr,
@@ -2753,7 +2645,6 @@ static int binder_translate_handle(struct flat_binder_object *fp,
 					 0, NULL);
 		if (node->proc)
 			binder_inner_proc_unlock(node->proc);
-		trace_binder_transaction_ref_to_node(t, node, &src_rdata);
 		binder_debug(BINDER_DEBUG_TRANSACTION,
 			     "        ref %d desc %d -> node %d u%016llx\n",
 			     src_rdata.debug_id, src_rdata.desc, node->debug_id,
@@ -2772,8 +2663,6 @@ static int binder_translate_handle(struct flat_binder_object *fp,
 		fp->binder = 0;
 		fp->handle = dest_rdata.desc;
 		fp->cookie = 0;
-		trace_binder_transaction_ref_to_ref(t, node, &src_rdata,
-						    &dest_rdata);
 		binder_debug(BINDER_DEBUG_TRANSACTION,
 			     "        ref %d desc %d -> ref %d desc %d (node %d)\n",
 			     src_rdata.debug_id, src_rdata.desc,
@@ -2829,7 +2718,6 @@ static int binder_translate_fd(int fd,
 		goto err_get_unused_fd;
 	}
 	task_fd_install(target_proc, target_fd, file);
-	trace_binder_transaction_fd(t, fd, target_fd);
 	binder_debug(BINDER_DEBUG_TRANSACTION, "        fd %d -> %d\n",
 		     fd, target_fd);
 
@@ -3062,18 +2950,8 @@ static bool binder_proc_transaction(struct binder_transaction *t,
 	if (thread) {
 		binder_transaction_priority(thread->task, t, node_prio,
 					    node->inherit_rt);
-#ifdef CONFIG_FAST_TRACK
-		ftt_binder_enqueue(thread, t->from);
-#endif
 		binder_enqueue_thread_work_ilocked(thread, &t->work);
 	} else if (!pending_async) {
-#ifdef CONFIG_FAST_TRACK
-		if (is_ftt(&current->se) && !oneway &&
-			binder_enable_fg_switch) {
-			binder_enqueue_work_ilocked(&t->work, &proc->fg_todo);
-			atomic64_inc(&binder_fg_req_num);
-		} else
-#endif
 		binder_enqueue_work_ilocked(&t->work, &proc->todo);
 	} else {
 		binder_enqueue_work_ilocked(&t->work, &node->async_todo);
@@ -3217,7 +3095,9 @@ static void binder_transaction(struct binder_proc *proc,
 	struct binder_thread *target_thread = NULL;
 	struct binder_node *target_node = NULL;
 	struct binder_transaction *in_reply_to = NULL;
+#ifdef CONFIG_ANDROID_BINDER_LOGS
 	struct binder_transaction_log_entry *e;
+#endif
 	uint32_t return_error = 0;
 	uint32_t return_error_param = 0;
 	uint32_t return_error_line = 0;
@@ -3228,6 +3108,7 @@ static void binder_transaction(struct binder_proc *proc,
 	char *secctx = NULL;
 	u32 secctx_sz = 0;
 
+#ifdef CONFIG_ANDROID_BINDER_LOGS
 	e = binder_transaction_log_add(&binder_transaction_log);
 	e->debug_id = t_debug_id;
 	e->call_type = reply ? 2 : !!(tr->flags & TF_ONE_WAY);
@@ -3237,6 +3118,7 @@ static void binder_transaction(struct binder_proc *proc,
 	e->data_size = tr->data_size;
 	e->offsets_size = tr->offsets_size;
 	e->context_name = proc->context->name;
+#endif
 
 	if (reply) {
 		binder_inner_proc_lock(proc);
@@ -3342,7 +3224,9 @@ static void binder_transaction(struct binder_proc *proc,
 			return_error_line = __LINE__;
 			goto err_dead_binder;
 		}
+#ifdef CONFIG_ANDROID_BINDER_LOGS
 		e->to_node = target_node->debug_id;
+#endif
 
 #ifdef CONFIG_SAMSUNG_FREECESS
 		freecess_sync_binder_report(proc, target_proc, tr);
@@ -3414,9 +3298,11 @@ static void binder_transaction(struct binder_proc *proc,
 		}
 		binder_inner_proc_unlock(proc);
 	}
+#ifdef CONFIG_ANDROID_BINDER_LOGS
 	if (target_thread)
 		e->to_thread = target_thread->pid;
 	e->to_proc = target_proc->pid;
+#endif
 
 	/* TODO: reuse incoming transaction for reply */
 	t = kzalloc(sizeof(*t), GFP_KERNEL);
@@ -3518,8 +3404,6 @@ retry_lowmem:
 		}
 	}
 
-	trace_binder_transaction(reply, t, target_node);
-
 	t->buffer = binder_alloc_new_buf(&target_proc->alloc, tr->data_size,
 		tr->offsets_size, extra_buffers_size,
 		!reply && (t->flags & TF_ONE_WAY), current->tgid);
@@ -3557,7 +3441,6 @@ retry_lowmem:
 	t->buffer->debug_id = t->debug_id;
 	t->buffer->transaction = t;
 	t->buffer->target_node = target_node;
-	trace_binder_transaction_alloc_buf(t->buffer);
 
 	if (binder_alloc_copy_user_to_buffer(
 				&target_proc->alloc,
@@ -3815,17 +3698,8 @@ retry_lowmem:
 		binder_pop_transaction_ilocked(target_thread, in_reply_to);
 		binder_enqueue_thread_work_ilocked(target_thread, &t->work);
 		binder_inner_proc_unlock(target_proc);
-#ifdef CONFIG_SCHED_WALT
-		if (target_thread->task && target_thread->task->signal &&
-			(target_thread->task->signal->oom_score_adj <= 0)) {
-			target_thread->task->low_latency = true;
-		}
-#endif
-		wake_up_interruptible_sync(&target_thread->wait);
 
-#ifdef CONFIG_FAST_TRACK
-		ftt_binder_dequeue(thread);
-#endif
+		wake_up_interruptible_sync(&target_thread->wait);
 
 		binder_restore_priority(current, in_reply_to->saved_priority);
 		binder_free_transaction(in_reply_to);
@@ -3862,12 +3736,14 @@ retry_lowmem:
 	binder_proc_dec_tmpref(target_proc);
 	if (target_node)
 		binder_dec_node_tmpref(target_node);
+#ifdef CONFIG_ANDROID_BINDER_LOGS
 	/*
 	 * write barrier to synchronize with initialization
 	 * of log entry
 	 */
 	smp_wmb();
 	WRITE_ONCE(e->debug_id_done, t_debug_id);
+#endif
 	return;
 
 err_dead_proc_or_thread:
@@ -3879,7 +3755,6 @@ err_bad_object_type:
 err_bad_offset:
 err_bad_parent:
 err_copy_data_failed:
-	trace_binder_transaction_failed_buffer_release(t->buffer);
 	binder_transaction_buffer_release(target_proc, t->buffer,
 					  buffer_offset, true);
 	if (target_node)
@@ -3903,10 +3778,6 @@ err_bad_call_stack:
 err_empty_call_stack:
 err_dead_binder:
 err_invalid_target_handle:
-#ifdef CONFIG_FAST_TRACK
-	if (reply)
-		ftt_binder_dequeue(thread);
-#endif
 	if (target_thread)
 		binder_thread_dec_tmpref(target_thread);
 	if (target_proc)
@@ -3922,6 +3793,7 @@ err_invalid_target_handle:
 		     (u64)tr->data_size, (u64)tr->offsets_size,
 		     return_error_line);
 
+#ifdef CONFIG_ANDROID_BINDER_LOGS
 	{
 		struct binder_transaction_log_entry *fe;
 
@@ -3938,6 +3810,7 @@ err_invalid_target_handle:
 		WRITE_ONCE(e->debug_id_done, t_debug_id);
 		WRITE_ONCE(fe->debug_id_done, t_debug_id);
 	}
+#endif
 
 	BUG_ON(thread->return_error.cmd != BR_OK);
 	if (in_reply_to) {
@@ -3968,12 +3841,13 @@ static int binder_thread_write(struct binder_proc *proc,
 		if (get_user(cmd, (uint32_t __user *)ptr))
 			return -EFAULT;
 		ptr += sizeof(uint32_t);
-		trace_binder_command(cmd);
+#ifdef CONFIG_ANDROID_BINDER_LOGS
 		if (_IOC_NR(cmd) < ARRAY_SIZE(binder_stats.bc)) {
 			atomic_inc(&binder_stats.bc[_IOC_NR(cmd)]);
 			atomic_inc(&proc->stats.bc[_IOC_NR(cmd)]);
 			atomic_inc(&thread->stats.bc[_IOC_NR(cmd)]);
 		}
+#endif
 		switch (cmd) {
 		case BC_INCREFS:
 		case BC_ACQUIRE:
@@ -4167,7 +4041,6 @@ static int binder_thread_write(struct binder_proc *proc,
 				}
 				binder_node_inner_unlock(buf_node);
 			}
-			trace_binder_transaction_buffer_release(buffer);
 			binder_transaction_buffer_release(proc, buffer, 0, false);
 			binder_alloc_free_buf(&proc->alloc, buffer);
 			break;
@@ -4421,12 +4294,13 @@ static int binder_thread_write(struct binder_proc *proc,
 static void binder_stat_br(struct binder_proc *proc,
 			   struct binder_thread *thread, uint32_t cmd)
 {
-	trace_binder_return(cmd);
+#ifdef CONFIG_ANDROID_BINDER_LOGS
 	if (_IOC_NR(cmd) < ARRAY_SIZE(binder_stats.br)) {
 		atomic_inc(&binder_stats.br[_IOC_NR(cmd)]);
 		atomic_inc(&proc->stats.br[_IOC_NR(cmd)]);
 		atomic_inc(&thread->stats.br[_IOC_NR(cmd)]);
 	}
+#endif
 }
 
 static int binder_put_node_cmd(struct binder_proc *proc,
@@ -4481,7 +4355,7 @@ static int binder_wait_for_work(struct binder_thread *thread,
 		binder_inner_proc_lock(proc);
 		list_del_init(&thread->waiting_thread_node);
 		if (signal_pending(current)) {
-			ret = -ERESTARTSYS;
+			ret = -EINTR;
 			break;
 		}
 	}
@@ -4517,9 +4391,6 @@ retry:
 
 	thread->looper |= BINDER_LOOPER_STATE_WAITING;
 
-	trace_binder_wait_for_work(wait_for_proc_work,
-				   !!thread->transaction_stack,
-				   !binder_worklist_empty(proc, &thread->todo));
 	if (wait_for_proc_work) {
 		if (!(thread->looper & (BINDER_LOOPER_STATE_REGISTERED |
 					BINDER_LOOPER_STATE_ENTERED))) {
@@ -4556,15 +4427,9 @@ retry:
 		binder_inner_proc_lock(proc);
 		if (!binder_worklist_empty_ilocked(&thread->todo))
 			list = &thread->todo;
-#ifdef CONFIG_FAST_TRACK
-		else if (!binder_proc_worklist_empty_ilocked(proc) &&
-			   wait_for_proc_work)
-			list = binder_proc_select_worklist_ilocked(proc);
-#else
 		else if (!binder_worklist_empty_ilocked(&proc->todo) &&
 			   wait_for_proc_work)
 			list = &proc->todo;
-#endif
 		else {
 			binder_inner_proc_unlock(proc);
 
@@ -4776,9 +4641,6 @@ retry:
 			trd->sender_pid =
 				task_tgid_nr_ns(sender,
 						task_active_pid_ns(current));
-#ifdef CONFIG_FAST_TRACK
-			ftt_binder_enqueue(thread, t_from);
-#endif
 		} else {
 			trd->sender_pid = 0;
 		}
@@ -4816,7 +4678,6 @@ retry:
 		}
 		ptr += trsize;
 
-		trace_binder_transaction_received(t);
 #ifdef CONFIG_SCHED_WALT
 		if (current->low_latency)
 			current->low_latency = false;
@@ -5156,7 +5017,6 @@ static int binder_ioctl_write_read(struct file *filp,
 					  bwr.write_buffer,
 					  bwr.write_size,
 					  &bwr.write_consumed);
-		trace_binder_write_done(ret);
 		if (ret < 0) {
 			bwr.read_consumed = 0;
 			if (copy_to_user(ubuf, &bwr, sizeof(bwr)))
@@ -5169,13 +5029,8 @@ static int binder_ioctl_write_read(struct file *filp,
 					 bwr.read_size,
 					 &bwr.read_consumed,
 					 filp->f_flags & O_NONBLOCK);
-		trace_binder_read_done(ret);
 		binder_inner_proc_lock(proc);
-#ifdef CONFIG_FAST_TRACK
-		if (!binder_proc_worklist_empty_ilocked(proc))
-#else
 		if (!binder_worklist_empty_ilocked(&proc->todo))
-#endif
 			binder_wakeup_proc_ilocked(proc);
 		binder_inner_proc_unlock(proc);
 		if (ret < 0) {
@@ -5319,8 +5174,6 @@ static long binder_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 	binder_selftest_alloc(&proc->alloc);
 
-	trace_binder_ioctl(cmd, arg);
-
 	ret = wait_event_interruptible(binder_user_error_wait, binder_stop_on_user_error < 2);
 	if (ret)
 		goto err_unlocked;
@@ -5441,10 +5294,9 @@ err:
 	if (thread)
 		thread->looper_need_return = false;
 	wait_event_interruptible(binder_user_error_wait, binder_stop_on_user_error < 2);
-	if (ret && ret != -ERESTARTSYS)
+	if (ret && ret != -EINTR)
 		pr_info("%d:%d ioctl %x %lx returned %d\n", proc->pid, current->pid, cmd, arg, ret);
 err_unlocked:
-	trace_binder_ioctl_done(ret);
 	if (ret == -ERESTARTSYS)
 		ret = -EINTR;
 	return ret;
@@ -5533,7 +5385,9 @@ static int binder_open(struct inode *nodp, struct file *filp)
 	struct binder_proc *proc;
 	struct binder_device *binder_dev;
 	struct binderfs_info *info;
+#ifdef CONFIG_ANDROID_BINDER_LOGS
 	struct dentry *binder_binderfs_dir_entry_proc = NULL;
+#endif
 
 	binder_debug(BINDER_DEBUG_OPEN_CLOSE, "%s: %d:%d\n", __func__,
 		     current->group_leader->pid, current->pid);
@@ -5548,10 +5402,6 @@ static int binder_open(struct inode *nodp, struct file *filp)
 	mutex_init(&proc->files_lock);
 	proc->cred = get_cred(filp->f_cred);
 	INIT_LIST_HEAD(&proc->todo);
-#ifdef CONFIG_FAST_TRACK
-	INIT_LIST_HEAD(&proc->fg_todo);
-	proc->fg_count = 0;
-#endif
 
 	if (binder_supported_policy(current->policy)) {
 		proc->default_priority.sched_policy = current->policy;
@@ -5565,7 +5415,9 @@ static int binder_open(struct inode *nodp, struct file *filp)
 	if (is_binderfs_device(nodp)) {
 		binder_dev = nodp->i_private;
 		info = nodp->i_sb->s_fs_info;
+#ifdef CONFIG_ANDROID_BINDER_LOGS
 		binder_binderfs_dir_entry_proc = info->proc_log_dir;
+#endif
 	} else {
 		binder_dev = container_of(filp->private_data,
 					  struct binder_device, miscdev);
@@ -5584,6 +5436,7 @@ static int binder_open(struct inode *nodp, struct file *filp)
 	hlist_add_head(&proc->proc_node, &binder_procs);
 	mutex_unlock(&binder_procs_lock);
 
+#ifdef CONFIG_ANDROID_BINDER_LOGS
 	if (binder_debugfs_dir_entry_proc) {
 		char strbuf[11];
 
@@ -5629,6 +5482,7 @@ static int binder_open(struct inode *nodp, struct file *filp)
 			}
 		}
 	}
+#endif
 
 	return 0;
 }
@@ -5821,9 +5675,6 @@ static void binder_deferred_release(struct binder_proc *proc)
 	binder_proc_unlock(proc);
 
 	binder_release_work(proc, &proc->todo);
-#ifdef CONFIG_FAST_TRACK
-	binder_release_work(proc, &proc->fg_todo);
-#endif
 	binder_release_work(proc, &proc->delivered_death);
 
 	binder_debug(BINDER_DEBUG_OPEN_CLOSE,
@@ -5889,6 +5740,50 @@ binder_defer_work(struct binder_proc *proc, enum binder_deferred_state defer)
 	mutex_unlock(&binder_deferred_lock);
 }
 
+static const char * const binder_return_strings[] = {
+	"BR_ERROR",
+	"BR_OK",
+	"BR_TRANSACTION",
+	"BR_REPLY",
+	"BR_ACQUIRE_RESULT",
+	"BR_DEAD_REPLY",
+	"BR_TRANSACTION_COMPLETE",
+	"BR_INCREFS",
+	"BR_ACQUIRE",
+	"BR_RELEASE",
+	"BR_DECREFS",
+	"BR_ATTEMPT_ACQUIRE",
+	"BR_NOOP",
+	"BR_SPAWN_LOOPER",
+	"BR_FINISHED",
+	"BR_DEAD_BINDER",
+	"BR_CLEAR_DEATH_NOTIFICATION_DONE",
+	"BR_FAILED_REPLY"
+};
+
+static const char * const binder_command_strings[] = {
+	"BC_TRANSACTION",
+	"BC_REPLY",
+	"BC_ACQUIRE_RESULT",
+	"BC_FREE_BUFFER",
+	"BC_INCREFS",
+	"BC_ACQUIRE",
+	"BC_RELEASE",
+	"BC_DECREFS",
+	"BC_INCREFS_DONE",
+	"BC_ACQUIRE_DONE",
+	"BC_ATTEMPT_ACQUIRE",
+	"BC_REGISTER_LOOPER",
+	"BC_ENTER_LOOPER",
+	"BC_EXIT_LOOPER",
+	"BC_REQUEST_DEATH_NOTIFICATION",
+	"BC_CLEAR_DEATH_NOTIFICATION",
+	"BC_DEAD_BINDER_DONE",
+	"BC_TRANSACTION_SG",
+	"BC_REPLY_SG",
+};
+
+#ifdef CONFIG_ANDROID_BINDER_LOGS
 static void print_binder_transaction_ilocked(struct seq_file *m,
 					     struct binder_proc *proc,
 					     const char *prefix,
@@ -6115,11 +6010,6 @@ static void print_binder_proc(struct seq_file *m,
 	list_for_each_entry(w, &proc->todo, entry)
 		print_binder_work_ilocked(m, proc, "  ",
 					  "  pending transaction", w);
-#ifdef CONFIG_FAST_TRACK
-	list_for_each_entry(w, &proc->fg_todo, entry)
-		print_binder_work_ilocked(m, proc, "  ",
-					  "  pending foreground transaction", w);
-#endif
 	list_for_each_entry(w, &proc->delivered_death, entry) {
 		seq_puts(m, "  has delivered dead binder\n");
 		break;
@@ -6128,6 +6018,7 @@ static void print_binder_proc(struct seq_file *m,
 	if (!print_all && m->count == header_pos)
 		m->count = start_pos;
 }
+#endif
 
 #ifdef CONFIG_SAMSUNG_FREECESS
 static void binder_in_transaction(struct binder_proc *proc, int uid)
@@ -6178,42 +6069,6 @@ static void binder_in_transaction(struct binder_proc *proc, int uid)
 	}
 
 	//check binder proc todo list
-#ifdef CONFIG_FAST_TRACK
-        empty = binder_proc_worklist_empty_ilocked(proc);
-	if (!empty) {
-		list_for_each_entry(w, &proc->todo, entry) {
-			if (w->type == BINDER_WORK_TRANSACTION) {
-				t = container_of(w, struct binder_transaction, work);
-				if (!(t->flags & TF_ONE_WAY)) {
-					found = true;
-					break;
-				}
-			}
-			else if (w->type != BINDER_WORK_TRANSACTION_COMPLETE && w->type != BINDER_WORK_NODE) {
-				found = true;
-				break;
-			}
-		}
-		list_for_each_entry(w, &proc->fg_todo, entry) {
-			if (w->type == BINDER_WORK_TRANSACTION) {
-				t = container_of(w, struct binder_transaction, work);
-				if (!(t->flags & TF_ONE_WAY)) {
-					found = true;
-					break;
-				}
-			}
-			else if (w->type != BINDER_WORK_TRANSACTION_COMPLETE && w->type != BINDER_WORK_NODE) {
-				found = true;
-				break;
-			}
-		}
-		if (found == true) {
-			binder_inner_proc_unlock(proc);
-			cfb_report(uid, "proc");
-			return;
-		}
-	}
-#else
 	empty = binder_worklist_empty_ilocked(&proc->todo);
 	if (!empty) {
 		list_for_each_entry(w, &proc->todo, entry) {
@@ -6236,10 +6091,11 @@ static void binder_in_transaction(struct binder_proc *proc, int uid)
 			return;
 		}
 	}
-#endif
 	binder_inner_proc_unlock(proc);
 }
+#endif
 
+#ifdef CONFIG_SAMSUNG_FREECESS
 void binders_in_transcation(int uid)
 {
 	struct binder_proc *itr;
@@ -6254,49 +6110,7 @@ void binders_in_transcation(int uid)
 }
 #endif
 
-static const char * const binder_return_strings[] = {
-	"BR_ERROR",
-	"BR_OK",
-	"BR_TRANSACTION",
-	"BR_REPLY",
-	"BR_ACQUIRE_RESULT",
-	"BR_DEAD_REPLY",
-	"BR_TRANSACTION_COMPLETE",
-	"BR_INCREFS",
-	"BR_ACQUIRE",
-	"BR_RELEASE",
-	"BR_DECREFS",
-	"BR_ATTEMPT_ACQUIRE",
-	"BR_NOOP",
-	"BR_SPAWN_LOOPER",
-	"BR_FINISHED",
-	"BR_DEAD_BINDER",
-	"BR_CLEAR_DEATH_NOTIFICATION_DONE",
-	"BR_FAILED_REPLY"
-};
-
-static const char * const binder_command_strings[] = {
-	"BC_TRANSACTION",
-	"BC_REPLY",
-	"BC_ACQUIRE_RESULT",
-	"BC_FREE_BUFFER",
-	"BC_INCREFS",
-	"BC_ACQUIRE",
-	"BC_RELEASE",
-	"BC_DECREFS",
-	"BC_INCREFS_DONE",
-	"BC_ACQUIRE_DONE",
-	"BC_ATTEMPT_ACQUIRE",
-	"BC_REGISTER_LOOPER",
-	"BC_ENTER_LOOPER",
-	"BC_EXIT_LOOPER",
-	"BC_REQUEST_DEATH_NOTIFICATION",
-	"BC_CLEAR_DEATH_NOTIFICATION",
-	"BC_DEAD_BINDER_DONE",
-	"BC_TRANSACTION_SG",
-	"BC_REPLY_SG",
-};
-
+#ifdef CONFIG_ANDROID_BINDER_LOGS
 static const char * const binder_objstat_strings[] = {
 	"proc",
 	"thread",
@@ -6410,19 +6224,8 @@ static void print_binder_proc_stats(struct seq_file *m,
 	binder_inner_proc_unlock(proc);
 	seq_printf(m, "  pending transactions: %d\n", count);
 
-#ifdef CONFIG_FAST_TRACK
-	count = 0;
-	binder_inner_proc_lock(proc);
-	list_for_each_entry(w, &proc->fg_todo, entry) {
-		if (w->type == BINDER_WORK_TRANSACTION)
-			count++;
-	}
-	binder_inner_proc_unlock(proc);
-	seq_printf(m, "  pending foreground transactions: %d\n", count);
-#endif
 	print_binder_stats(m, "  ", &proc->stats);
 }
-
 
 int binder_state_show(struct seq_file *m, void *unused)
 {
@@ -6555,6 +6358,7 @@ int binder_transaction_log_show(struct seq_file *m, void *unused)
 	}
 	return 0;
 }
+#endif
 
 const struct file_operations binder_fops = {
 	.owner = THIS_MODULE,
@@ -6608,6 +6412,7 @@ static int __init binder_init(void)
 	if (ret)
 		return ret;
 
+#ifdef CONFIG_ANDROID_BINDER_LOGS
 	atomic_set(&binder_transaction_log.cur, ~0U);
 	atomic_set(&binder_transaction_log_failed.cur, ~0U);
 
@@ -6642,14 +6447,8 @@ static int __init binder_init(void)
 				    binder_debugfs_dir_entry_root,
 				    &binder_transaction_log_failed,
 				    &binder_transaction_log_fops);
-#ifdef CONFIG_FAST_TRACK
-		debugfs_create_file("switch",
-				    S_IRUGO,
-				    binder_debugfs_dir_entry_root,
-				    NULL,
-				    &binder_switch_fops);
-#endif
 	}
+#endif
 
 	if (!IS_ENABLED(CONFIG_ANDROID_BINDERFS) &&
 	    strcmp(binder_devices_param, "") != 0) {
@@ -6695,6 +6494,5 @@ err_alloc_device_names_failed:
 device_initcall(binder_init);
 
 #define CREATE_TRACE_POINTS
-#include "binder_trace.h"
 
 MODULE_LICENSE("GPL v2");

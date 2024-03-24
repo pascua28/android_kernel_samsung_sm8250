@@ -141,7 +141,7 @@ static void _sde_core_perf_calc_doze_suspend(struct drm_crtc *crtc,
 		}
 
 		if (!is_doze_suspend && conn && c_conn)
-			SDE_ERROR("No BW, planes:%x dpms_mode:%d lpmode:%d\n",
+			SDE_ERROR("No BW, planes:%x dpms_mode:%d lpmode:%llu\n",
 				state->plane_mask, c_conn->dpms_mode,
 				sde_connector_get_lp(conn));
 		if (conn && c_conn)
@@ -374,9 +374,6 @@ static int _sde_core_perf_activate_llcc(struct sde_kms *kms,
 	u32 uid, bool activate)
 {
 	struct llcc_slice_desc *slice;
-	struct drm_device *drm_dev;
-	struct device *dev;
-	struct platform_device *pdev;
 	int rc = 0;
 
 	if (!kms || !kms->dev || !kms->dev->dev) {
@@ -384,10 +381,6 @@ static int _sde_core_perf_activate_llcc(struct sde_kms *kms,
 		rc = -EINVAL;
 		goto exit;
 	}
-
-	drm_dev = kms->dev;
-	dev = drm_dev->dev;
-	pdev = to_platform_device(dev);
 
 	/* If LLCC is already in the requested state, skip */
 	SDE_EVT32(activate, kms->perf.llcc_active);
@@ -746,7 +739,6 @@ void sde_core_perf_crtc_release_bw(struct drm_crtc *crtc)
 {
 	struct drm_crtc *tmp_crtc;
 	struct sde_crtc *sde_crtc;
-	struct sde_crtc_state *sde_cstate;
 	struct sde_kms *kms;
 	int i;
 
@@ -762,7 +754,6 @@ void sde_core_perf_crtc_release_bw(struct drm_crtc *crtc)
 	}
 
 	sde_crtc = to_sde_crtc(crtc);
-	sde_cstate = to_sde_crtc_state(crtc->state);
 
 	/* only do this for command mode rt client (non-rsc client) */
 	if ((sde_crtc_get_intf_mode(crtc, crtc->state) != INTF_MODE_CMD) &&
@@ -1078,7 +1069,7 @@ static ssize_t _sde_core_perf_threshold_high_write(struct file *file,
 {
 	struct sde_core_perf *perf = file->private_data;
 	u32 threshold_high = 0;
-	char buf[10];
+	char buf[10] = "";
 
 	if (!perf)
 		return -ENODEV;
@@ -1135,7 +1126,7 @@ static ssize_t _sde_core_perf_mode_write(struct file *file,
 	struct sde_core_perf *perf = file->private_data;
 	struct sde_perf_cfg *cfg = &perf->catalog->perf;
 	u32 perf_mode = 0;
-	char buf[10];
+	char buf[10] = "";
 	int ret = 0;
 
 	if (!perf)

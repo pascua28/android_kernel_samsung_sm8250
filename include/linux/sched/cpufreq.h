@@ -11,11 +11,10 @@
 #define SCHED_CPUFREQ_IOWAIT	(1U << 0)
 #define SCHED_CPUFREQ_MIGRATION	(1U << 1)
 #define SCHED_CPUFREQ_INTERCLUSTER_MIG (1U << 3)
-#define SCHED_CPUFREQ_WALT (1U << 4)
+#define SCHED_CPUFREQ_RESERVED	(1U << 4)
 #define SCHED_CPUFREQ_PL        (1U << 5)
 #define SCHED_CPUFREQ_EARLY_DET (1U << 6)
 #define SCHED_CPUFREQ_CONTINUE (1U << 8)
-#define SCHED_CPUFREQ_FPS (1U << 9)
 
 #ifdef CONFIG_CPU_FREQ
 struct cpufreq_policy;
@@ -30,10 +29,14 @@ void cpufreq_add_update_util_hook(int cpu, struct update_util_data *data,
 void cpufreq_remove_update_util_hook(int cpu);
 bool cpufreq_this_cpu_can_update(struct cpufreq_policy *policy);
 
-static inline unsigned long map_util_freq(unsigned long util,
-					unsigned long freq, unsigned long cap)
+static unsigned long scale_freq[8] = {
+	1536, 1536, 1536, 1536, 1280, 1280, 1280, 1280
+};
+
+static inline unsigned long map_util_freq(unsigned long util, unsigned long freq,
+					 unsigned long cap, int cpu)
 {
-	return (freq + (freq >> 2)) * util / cap;
+	return (freq * scale_freq[cpu] >> SCHED_CAPACITY_SHIFT) * util / cap;
 }
 #endif /* CONFIG_CPU_FREQ */
 

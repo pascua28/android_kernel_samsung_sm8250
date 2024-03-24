@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved. */
+/* Copyright (c) 2018-2021, The Linux Foundation. All rights reserved. */
 
 #include <linux/debugfs.h>
 #include <linux/delay.h>
@@ -261,9 +261,11 @@ int mhi_ready_state_transition(struct mhi_controller *mhi_cntrl)
 #ifdef CONFIG_SEC_DEBUG_MDM_FILE_INFO
     snprintf(mdmerr_info, sizeof(mdmerr_info), 
 				"%x\n", mhi_cntrl->session_id);
+#ifdef CONFIG_SEC_DEBUG_SUMMARY
     sec_set_mdm_summary_info(mdmerr_info);
 
 	MHI_ERR("MDM session ID : %s\n", mdmerr_info);
+#endif
 #endif
 
 	MHI_CNTRL_LOG("Waiting to enter READY state\n");
@@ -407,7 +409,8 @@ int mhi_pm_m0_transition(struct mhi_controller *mhi_cntrl)
 
 		read_lock_irq(&mhi_chan->lock);
 		/* only ring DB if ring is not empty */
-		if (tre_ring->base && tre_ring->wp  != tre_ring->rp)
+		if (tre_ring->base && tre_ring->wp  != tre_ring->rp &&
+		    mhi_chan->ch_state == MHI_CH_STATE_ENABLED)
 			mhi_ring_chan_db(mhi_cntrl, mhi_chan);
 		read_unlock_irq(&mhi_chan->lock);
 	}
@@ -1074,8 +1077,7 @@ void mhi_control_error(struct mhi_controller *mhi_cntrl)
 	/* copy subsystem failure reason string if supported */
 	if (sfr_info && sfr_info->buf_addr) {
 		memcpy(sfr_info->str, sfr_info->buf_addr, sfr_info->len);
-		MHI_CNTRL_ERR("mhi:%s sfr: %s\n", mhi_cntrl->name,
-				sfr_info->buf_addr);
+		MHI_CNTRL_ERR("mhi:%s sfr: %s\n", mhi_cntrl->name, sfr_info->str);
 	}
 
 #ifdef CONFIG_SEC_DEBUG_MDM_FILE_INFO
@@ -1085,8 +1087,9 @@ void mhi_control_error(struct mhi_controller *mhi_cntrl)
 					"%x, Failure reason: %s\n", 
 					mhi_cntrl->session_id,
 					mhi_get_restart_reason(mhi_cntrl->name));
+#ifdef CONFIG_SEC_DEBUG_SUMMARY
 		sec_set_mdm_summary_info(mdmerr_info);
-
+#endif
 		MHI_ERR("MDM session ID : %s\n", mdmerr_info);
 	}
 #endif
@@ -1709,7 +1712,8 @@ int mhi_device_get_sync(struct mhi_device *mhi_dev, int vote)
 }
 EXPORT_SYMBOL(mhi_device_get_sync);
 
-int mhi_device_get_sync_atomic(struct mhi_device *mhi_dev, int timeout_us)
+int mhi_device_get_sync_atomic(struct mhi_device *mhi_dev, int timeout_us,
+			       bool in_panic)
 {
 	struct mhi_controller *mhi_cntrl = mhi_dev->mhi_cntrl;
 
@@ -1735,11 +1739,20 @@ int mhi_device_get_sync_atomic(struct mhi_device *mhi_dev, int timeout_us)
 		return 0;
 	}
 
-	while (mhi_cntrl->pm_state != MHI_PM_M0 &&
-			!MHI_PM_IN_ERROR_STATE(mhi_cntrl->pm_state) &&
-			timeout_us > 0) {
-		udelay(MHI_FORCE_WAKE_DELAY_US);
-		timeout_us -= MHI_FORCE_WAKE_DELAY_US;
+	if (in_panic) {
+		while (mhi_get_mhi_state(mhi_cntrl) != MHI_STATE_M0 &&
+		       !MHI_PM_IN_ERROR_STATE(mhi_cntrl->pm_state) &&
+		       timeout_us > 0) {
+			udelay(MHI_FORCE_WAKE_DELAY_US);
+			timeout_us -= MHI_FORCE_WAKE_DELAY_US;
+		}
+	} else {
+		while (mhi_cntrl->pm_state != MHI_PM_M0 &&
+		       !MHI_PM_IN_ERROR_STATE(mhi_cntrl->pm_state) &&
+		       timeout_us > 0) {
+			udelay(MHI_FORCE_WAKE_DELAY_US);
+			timeout_us -= MHI_FORCE_WAKE_DELAY_US;
+		}
 	}
 
 	if (MHI_PM_IN_ERROR_STATE(mhi_cntrl->pm_state) || timeout_us <= 0) {

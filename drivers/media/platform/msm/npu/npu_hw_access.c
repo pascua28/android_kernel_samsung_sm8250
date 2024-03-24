@@ -33,7 +33,7 @@ static uint32_t npu_reg_read(void __iomem *base, size_t size, uint32_t off)
 	}
 
 	if (off >= size) {
-		NPU_ERR("offset exceeds io region %x:%x\n", off, size);
+		NPU_ERR("offset exceeds io region %x:%lx\n", off, size);
 		return 0;
 	}
 
@@ -54,7 +54,7 @@ static void npu_reg_write(void __iomem *base, size_t size, uint32_t off,
 	}
 
 	if (off >= size) {
-		NPU_ERR("offset exceeds io region %x:%x\n", off, size);
+		NPU_ERR("offset exceeds io region %x:%lx\n", off, size);
 		return;
 	}
 
@@ -124,7 +124,7 @@ void npu_mem_write(struct npu_device *npu_dev, void *dst, void *src,
 
 	if (dst_off >= npu_dev->tcm_io.size ||
 		(npu_dev->tcm_io.size - dst_off) < size) {
-		NPU_ERR("memory write exceeds io region %x:%x:%x\n",
+		NPU_ERR("memory write exceeds io region %lx:%x:%lx\n",
 			dst_off, size, npu_dev->tcm_io.size);
 		return;
 	}
@@ -159,7 +159,7 @@ int32_t npu_mem_read(struct npu_device *npu_dev, void *src, void *dst,
 
 	if (src_off >= npu_dev->tcm_io.size ||
 		(npu_dev->tcm_io.size - src_off) < size) {
-		NPU_ERR("memory read exceeds io region %x:%x:%x\n",
+		NPU_ERR("memory read exceeds io region %lx:%x:%lx\n",
 			src_off, size, npu_dev->tcm_io.size);
 		return 0;
 	}
@@ -429,51 +429,4 @@ void *subsystem_get_local(char *sub_system)
 void subsystem_put_local(void *sub_system_handle)
 {
 	return subsystem_put(sub_system_handle);
-}
-
-/* -------------------------------------------------------------------------
- * Functions - Log
- * -------------------------------------------------------------------------
- */
-void npu_process_log_message(struct npu_device *npu_dev, uint32_t *message,
-	uint32_t size)
-{
-	struct npu_debugfs_ctx *debugfs = &npu_dev->debugfs_ctx;
-
-	/* mutex log lock */
-	mutex_lock(&debugfs->log_lock);
-
-	if ((debugfs->log_num_bytes_buffered + size) >
-		debugfs->log_buf_size) {
-		/* No more space, invalidate it all and start over */
-		debugfs->log_read_index = 0;
-		debugfs->log_write_index = size;
-		debugfs->log_num_bytes_buffered = size;
-		memcpy(debugfs->log_buf, message, size);
-	} else {
-		if ((debugfs->log_write_index + size) >
-			debugfs->log_buf_size) {
-			/* Wrap around case */
-			uint8_t *src_addr = (uint8_t *)message;
-			uint8_t *dst_addr = 0;
-			uint32_t remaining_to_end = debugfs->log_buf_size -
-				debugfs->log_write_index + 1;
-			dst_addr = debugfs->log_buf + debugfs->log_write_index;
-			memcpy(dst_addr, src_addr, remaining_to_end);
-			src_addr = &(src_addr[remaining_to_end]);
-			dst_addr = debugfs->log_buf;
-			memcpy(dst_addr, src_addr, size-remaining_to_end);
-			debugfs->log_write_index = size-remaining_to_end;
-		} else {
-			memcpy((debugfs->log_buf + debugfs->log_write_index),
-				message, size);
-			debugfs->log_write_index += size;
-			if (debugfs->log_write_index == debugfs->log_buf_size)
-				debugfs->log_write_index = 0;
-		}
-		debugfs->log_num_bytes_buffered += size;
-	}
-
-	/* mutex log unlock */
-	mutex_unlock(&debugfs->log_lock);
 }

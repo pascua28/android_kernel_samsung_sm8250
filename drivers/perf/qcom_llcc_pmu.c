@@ -116,12 +116,7 @@ static void mon_enable(struct llcc_pmu *llccpmu, int cpu)
 
 static unsigned long read_cnt(struct llcc_pmu *llccpmu, int cpu)
 {
-	unsigned long value;
-
-	if (!llccpmu->ver) {
-		pr_err("LLCCPMU version not correct\n");
-		return -EINVAL;
-	}
+	unsigned long value = 0;
 
 	switch (llccpmu->ver) {
 	case LLCC_PMU_VER1:
@@ -130,6 +125,9 @@ static unsigned long read_cnt(struct llcc_pmu *llccpmu, int cpu)
 	case LLCC_PMU_VER2:
 		value = readl_relaxed(MON_CNT(llccpmu, cpu));
 		break;
+	default:
+		pr_err("LLCCPMU version not correct\n");
+		return -EINVAL;
 	}
 	return value;
 }
@@ -255,7 +253,7 @@ static int qcom_llcc_pmu_probe(struct platform_device *pdev)
 	if (!llccpmu)
 		return -ENOMEM;
 
-	llccpmu->ver = (enum llcc_pmu_version)
+	llccpmu->ver = (enum llcc_pmu_version)(long)
 			of_device_get_match_data(&pdev->dev);
 	if (!llccpmu->ver) {
 		pr_err("Unknown device type!\n");

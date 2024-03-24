@@ -60,6 +60,7 @@
 #include <linux/reset.h>
 #include <linux/extcon-provider.h>
 #include <linux/devfreq.h>
+#include <linux/pm_qos.h>
 #include "unipro.h"
 
 #include <asm/irq.h>
@@ -420,15 +421,6 @@ struct ufs_hba_variant_ops {
 };
 
 /**
- * struct ufs_hba_pm_qos_variant_ops - variant specific PM QoS callbacks
- */
-struct ufs_hba_pm_qos_variant_ops {
-	void		(*req_start)(struct ufs_hba *hba, struct request *req);
-	void		(*req_end)(struct ufs_hba *hba, struct request *req,
-				   bool should_lock);
-};
-
-/**
  * struct ufs_hba_variant - variant specific parameters
  * @name: variant name
  */
@@ -436,7 +428,6 @@ struct ufs_hba_variant {
 	struct device				*dev;
 	const char				*name;
 	struct ufs_hba_variant_ops		*vops;
-	struct ufs_hba_pm_qos_variant_ops	*pm_qos_vops;
 };
 
 struct keyslot_mgmt_ll_ops;
@@ -510,6 +501,7 @@ struct ufs_clk_gating {
 	struct device_attribute delay_perf_attr;
 	struct device_attribute enable_attr;
 	bool is_enabled;
+	bool gate_wk_in_process;
 	int active_reqs;
 	struct workqueue_struct *clk_gating_workq;
 };
@@ -1181,6 +1173,8 @@ struct ufs_hba {
 	/* Number of requests aborts */
 	int req_abort_count;
 
+	u32 security_in;
+
 	/* Number of lanes available (1 or 2) for Rx/Tx */
 	u32 lanes_per_direction;
 
@@ -1313,6 +1307,15 @@ struct ufs_hba {
 	ANDROID_KABI_RESERVE(2);
 	ANDROID_KABI_RESERVE(3);
 	ANDROID_KABI_RESERVE(4);
+
+	struct {
+		struct pm_qos_request req;
+		struct work_struct get_work;
+		struct work_struct put_work;
+		struct mutex lock;
+		atomic_t count;
+		bool active;
+	} pm_qos;
 };
 
 static inline void ufshcd_mark_shutdown_ongoing(struct ufs_hba *hba)
@@ -1797,21 +1800,6 @@ static inline void ufshcd_vops_remove_debugfs(struct ufs_hba *hba)
 {
 }
 #endif
-
-static inline void ufshcd_vops_pm_qos_req_start(struct ufs_hba *hba,
-		struct request *req)
-{
-	if (hba->var && hba->var->pm_qos_vops &&
-		hba->var->pm_qos_vops->req_start)
-		hba->var->pm_qos_vops->req_start(hba, req);
-}
-
-static inline void ufshcd_vops_pm_qos_req_end(struct ufs_hba *hba,
-		struct request *req, bool lock)
-{
-	if (hba->var && hba->var->pm_qos_vops && hba->var->pm_qos_vops->req_end)
-		hba->var->pm_qos_vops->req_end(hba, req, lock);
-}
 
 extern struct ufs_pm_lvl_states ufs_pm_lvl_states[];
 

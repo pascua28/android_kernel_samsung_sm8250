@@ -9,7 +9,7 @@
 #include "msm_cvp_common.h"
 #include "cvp_core_hfi.h"
 
-int msm_cvp_debug = CVP_ERR | CVP_WARN | CVP_FW;
+int msm_cvp_debug = CVP_ERR | CVP_WARN;
 EXPORT_SYMBOL(msm_cvp_debug);
 
 int msm_cvp_debug_out = CVP_OUT_PRINTK;
@@ -159,6 +159,7 @@ static const struct file_operations ssr_fops = {
 	.write = trigger_ssr_write,
 };
 
+#ifdef CONFIG_DEBUG_FS
 struct dentry *msm_cvp_debugfs_init_drv(void)
 {
 	bool ok = false;
@@ -207,6 +208,7 @@ failed_create_dir:
 
 	return NULL;
 }
+#endif
 
 static int _clk_rate_set(void *data, u64 val)
 {
@@ -261,8 +263,8 @@ static int _clk_rate_get(void *data, u64 *val)
 	return 0;
 }
 
+#ifdef CONFIG_DEBUG_FS
 DEFINE_DEBUGFS_ATTRIBUTE(clk_rate_fops, _clk_rate_get, _clk_rate_set, "%llu\n");
-
 
 struct dentry *msm_cvp_debugfs_init_core(struct msm_cvp_core *core,
 		struct dentry *parent)
@@ -299,6 +301,7 @@ struct dentry *msm_cvp_debugfs_init_core(struct msm_cvp_core *core,
 failed_create_dir:
 	return dir;
 }
+#endif
 
 static int inst_info_open(struct inode *inode, struct file *file)
 {
@@ -400,6 +403,7 @@ static const struct file_operations inst_info_fops = {
 	.release = inst_info_release,
 };
 
+#ifdef CONFIG_DEBUG_FS
 struct dentry *msm_cvp_debugfs_init_inst(struct msm_cvp_inst *inst,
 		struct dentry *parent)
 {
@@ -464,3 +468,4 @@ void msm_cvp_debugfs_deinit_inst(struct msm_cvp_inst *inst)
 	debugfs_remove_recursive(dentry);
 	inst->debugfs_root = NULL;
 }
+#endif

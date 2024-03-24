@@ -65,6 +65,8 @@ EXPORT_SYMBOL_GPL(kimage_vaddr);
  * that cannot be mistaken for a real physical address.
  */
 s64 memstart_addr __ro_after_init = -1;
+EXPORT_SYMBOL(memstart_addr);
+
 phys_addr_t arm64_dma_phys_limit __ro_after_init;
 
 #ifdef CONFIG_BLK_DEV_INITRD
@@ -509,10 +511,9 @@ void __init arm64_memblock_init(void)
 	 * Save bootloader imposed memory limit before we overwirte
 	 * memblock.
 	 */
-	if (memory_limit == PHYS_ADDR_MAX)
+	bootloader_memory_limit = memblock_max_addr(memory_limit);
+	if (bootloader_memory_limit > memblock_end_of_DRAM())
 		bootloader_memory_limit = memblock_end_of_DRAM();
-	else
-		bootloader_memory_limit = memblock_max_addr(memory_limit);
 
 	update_memory_limit();
 

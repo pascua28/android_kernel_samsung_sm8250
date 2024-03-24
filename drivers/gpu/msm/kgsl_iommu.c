@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2011-2020, The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2011-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022-2023, Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <linux/compat.h>
@@ -218,8 +218,9 @@ static void kgsl_iommu_remove_global(struct kgsl_mmu *mmu,
 static void kgsl_iommu_add_global(struct kgsl_mmu *mmu,
 		struct kgsl_memdesc *memdesc, const char *name)
 {
-	u32 bit, start = 0;
+	u32 bit;
 	u64 size = kgsl_memdesc_footprint(memdesc);
+	int start = 0;
 
 	if (memdesc->gpuaddr != 0)
 		return;
@@ -1174,7 +1175,7 @@ void _enable_gpuhtw_llc(struct kgsl_mmu *mmu, struct kgsl_iommu_pt *iommu_pt)
 	int ret;
 
 	/* GPU pagetable walk LLC slice not enabled */
-	if (IS_ERR(adreno_dev->gpuhtw_llc_slice))
+	if (IS_ERR_OR_NULL(adreno_dev->gpuhtw_llc_slice))
 		return;
 
 	/* Domain attribute to enable system cache for GPU pagetable walks */
@@ -2462,14 +2463,18 @@ static uint64_t kgsl_iommu_find_svm_region(struct kgsl_pagetable *pagetable,
 static bool iommu_addr_in_svm_ranges(struct kgsl_iommu_pt *pt,
 	u64 gpuaddr, u64 size)
 {
+	u64 end = gpuaddr + size;
+
+	/* Make sure size is not zero and we don't wrap around */
+	if (end <= gpuaddr)
+		return false;
+
 	if ((gpuaddr >= pt->compat_va_start && gpuaddr < pt->compat_va_end) &&
-		((gpuaddr + size) > pt->compat_va_start &&
-			(gpuaddr + size) <= pt->compat_va_end))
+		(end > pt->compat_va_start && end <= pt->compat_va_end))
 		return true;
 
 	if ((gpuaddr >= pt->svm_start && gpuaddr < pt->svm_end) &&
-		((gpuaddr + size) > pt->svm_start &&
-			(gpuaddr + size) <= pt->svm_end))
+		(end > pt->svm_start && end <= pt->svm_end))
 		return true;
 
 	return false;
@@ -2624,7 +2629,7 @@ static bool kgsl_iommu_addr_in_range(struct kgsl_pagetable *pagetable,
 		return true;
 
 	if (gpuaddr >= pt->compat_va_start &&
-		       (gpuaddr + size) < pt->compat_va_end)
+			(gpuaddr + size) < pt->compat_va_end)
 		return true;
 
 	if (gpuaddr >= pt->svm_start && (gpuaddr + size) < pt->svm_end)
@@ -2848,29 +2853,8 @@ void kgsl_svm_addr_hole_log(struct kgsl_device *device, pid_t pid, uint64_t memf
 	if (__ratelimit(&_rs)) {
 		memset(&svm_hole_log_data, 0, sizeof(struct kgsl_hole_logging));
 
-		if (!kgsl_gpu_addr_hole_log(device, pid, memflags)) {
+		if (!kgsl_gpu_addr_hole_log(device, pid, memflags))
 			kgsl_cpu_addr_hole_log(pid);
-
-			pr_err("%s GPU pid %d entry_cnt %d used_size %ld biggest_hole_size 0x%lx \
-				0x%lx 0x%lx 0x%lx\n", __func__,
-				pid,
-				svm_hole_log_data.gpu_hole_data.entry_cnt,
-				svm_hole_log_data.gpu_hole_data.used_mem_size,
-				svm_hole_log_data.gpu_hole_data.biggest_hole_size,
-				svm_hole_log_data.gpu_hole_data.biggest_hole_addr,
-				svm_hole_log_data.low,
-				svm_hole_log_data.high);
-
-			pr_err("%s CPU pid %d entry_cnt %d used_size %ld biggest_hole_size 0x%lx \
-				0x%lx 0x%lx 0x%lx\n", __func__,
-				pid,
-				svm_hole_log_data.cpu_hole_data.entry_cnt,
-				svm_hole_log_data.cpu_hole_data.used_mem_size,
-				svm_hole_log_data.cpu_hole_data.biggest_hole_size,
-				svm_hole_log_data.cpu_hole_data.biggest_hole_addr,
-				svm_hole_log_data.low,
-				svm_hole_log_data.high);
-		}
 	}
 }
 #endif

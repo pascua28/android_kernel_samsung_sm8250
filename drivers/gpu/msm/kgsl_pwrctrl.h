@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
+ * Copyright (c) 2010-2021, The Linux Foundation. All rights reserved.
  * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 #ifndef __KGSL_PWRCTRL_H
@@ -23,7 +24,7 @@
 #define KGSL_GPU_CFG_PATH_LOW	1
 #define KGSL_GPU_CFG_PATH_HIGH	2
 
-#define KGSL_MAX_CLKS 17
+#define KGSL_MAX_CLKS 18
 #define KGSL_MAX_REGULATORS 2
 
 #define KGSL_MAX_PWRLEVELS 10
@@ -47,19 +48,6 @@
 #define KGSL_PWR_ADD_LIMIT 0
 #define KGSL_PWR_DEL_LIMIT 1
 #define KGSL_PWR_SET_LIMIT 2
-
-/*
- * The effective duration of qos request in usecs at queue time.
- * After timeout, qos request is cancelled automatically.
- * Kept 80ms default, inline with default GPU idle time.
- */
-#define KGSL_L2PC_QUEUE_TIMEOUT	(80 * 1000)
-
-/*
- * The effective duration of qos request in usecs at wakeup time.
- * After timeout, qos request is cancelled automatically.
- */
-#define KGSL_L2PC_WAKEUP_TIMEOUT (10 * 1000)
 
 enum kgsl_pwrctrl_timer_type {
 	KGSL_PWR_IDLE_TIMER,
@@ -139,7 +127,6 @@ struct gpu_cx_ipeak_client {
  * @previous_pwrlevel - The power level before transition
  * @thermal_pwrlevel - maximum powerlevel constraint from thermal
  * @thermal_pwrlevel_floor - minimum powerlevel constraint from thermal
- * @default_pwrlevel - device wake up power level
  * @max_pwrlevel - maximum allowable powerlevel per the user
  * @min_pwrlevel - minimum allowable powerlevel per the user
  * @num_pwrlevels - number of available power levels
@@ -151,13 +138,9 @@ struct gpu_cx_ipeak_client {
  * @gpu_cfg - CPU to GPU AHB path bus scale identifier
  * @irq_name - resource name for the IRQ
  * @clk_stats - structure of clock statistics
- * @l2pc_cpus_mask - mask to avoid L2PC on masked CPUs
- * @l2pc_update_queue - Boolean flag to avoid L2PC on masked CPUs at queue time
- * @l2pc_cpus_qos - qos structure to avoid L2PC on CPUs
  * @pm_qos_req_dma - the power management quality of service structure
  * @pm_qos_active_latency - allowed CPU latency in microseconds when active
  * @pm_qos_cpu_mask_latency - allowed CPU mask latency in microseconds
- * @input_disable - To disable GPU wakeup on touch input event
  * @pm_qos_wakeup_latency - allowed CPU latency in microseconds during wakeup
  * @bus_control - true if the bus calculation is independent
  * @bus_mod - modifier from the current power level for the bus vote
@@ -181,7 +164,6 @@ struct gpu_cx_ipeak_client {
  * @cooling_pwr_limit - pointer to the cooling framework limits node
  * isense_clk_indx - index of isense clock, 0 if no isense
  * isense_clk_on_level - isense clock rate is XO rate below this level.
- * tzone_name - pointer to thermal zone name of GPU temperature sensor
  * gpu_cx_ipeak_client - CX Ipeak clients used by GPU
  */
 
@@ -199,7 +181,6 @@ struct kgsl_pwrctrl {
 	unsigned int previous_pwrlevel;
 	unsigned int thermal_pwrlevel;
 	unsigned int thermal_pwrlevel_floor;
-	unsigned int default_pwrlevel;
 	unsigned int wakeup_maxpwrlevel;
 	unsigned int max_pwrlevel;
 	unsigned int min_pwrlevel;
@@ -212,14 +193,10 @@ struct kgsl_pwrctrl {
 	uint32_t gpu_cfg;
 	const char *irq_name;
 	struct kgsl_clk_stats clk_stats;
-	unsigned int l2pc_cpus_mask;
-	bool l2pc_update_queue;
-	struct pm_qos_request l2pc_cpus_qos;
 	struct pm_qos_request pm_qos_req_dma;
 	unsigned int pm_qos_active_latency;
 	unsigned int pm_qos_cpu_mask_latency;
 	unsigned int pm_qos_wakeup_latency;
-	bool input_disable;
 	bool bus_control;
 	int bus_mod;
 	unsigned int bus_percent_ab;
@@ -242,7 +219,6 @@ struct kgsl_pwrctrl {
 	struct kgsl_pwr_limit *cooling_pwr_limit;
 	unsigned int gpu_bimc_int_clk_freq;
 	bool gpu_bimc_interface_enabled;
-	const char *tzone_name;
 	struct gpu_cx_ipeak_client gpu_ipeak_client[2];
 };
 
@@ -288,8 +264,6 @@ int kgsl_active_count_wait(struct kgsl_device *device, int count);
 void kgsl_pwrctrl_busy_time(struct kgsl_device *device, u64 time, u64 busy);
 void kgsl_pwrctrl_set_constraint(struct kgsl_device *device,
 			struct kgsl_pwr_constraint *pwrc, uint32_t id);
-void kgsl_pwrctrl_update_l2pc(struct kgsl_device *device,
-			unsigned long timeout_us);
 int kgsl_pwrctrl_set_default_gpu_pwrlevel(struct kgsl_device *device);
 void kgsl_pwrctrl_disable_unused_opp(struct kgsl_device *device,
 		struct device *dev);

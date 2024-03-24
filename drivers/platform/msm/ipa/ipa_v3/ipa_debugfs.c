@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
  */
 
 #ifdef CONFIG_DEBUG_FS
@@ -794,7 +794,7 @@ static ssize_t ipa3_read_rt(struct file *file, char __user *ubuf, size_t count,
 	struct ipa3_rt_tbl *tbl;
 	struct ipa3_rt_entry *entry;
 	struct ipa3_rt_tbl_set *set;
-	enum ipa_ip_type ip = (enum ipa_ip_type)file->private_data;
+	enum ipa_ip_type ip = (enum ipa_ip_type)(long)file->private_data;
 	u32 ofst;
 	u32 ofst_words;
 
@@ -891,7 +891,7 @@ static ssize_t ipa3_read_rt(struct file *file, char __user *ubuf, size_t count,
 static ssize_t ipa3_read_rt_hw(struct file *file, char __user *ubuf,
 	size_t count, loff_t *ppos)
 {
-	enum ipa_ip_type ip = (enum ipa_ip_type)file->private_data;
+	enum ipa_ip_type ip = (enum ipa_ip_type)(long)file->private_data;
 	int tbls_num;
 	int rules_num;
 	int tbl;
@@ -1059,7 +1059,7 @@ static ssize_t ipa3_read_flt(struct file *file, char __user *ubuf, size_t count,
 	int j;
 	struct ipa3_flt_tbl *tbl;
 	struct ipa3_flt_entry *entry;
-	enum ipa_ip_type ip = (enum ipa_ip_type)file->private_data;
+	enum ipa_ip_type ip = (enum ipa_ip_type)(long)file->private_data;
 	struct ipa3_rt_tbl *rt_tbl;
 	u32 rt_tbl_idx;
 	u32 bitmap;
@@ -1130,7 +1130,7 @@ static ssize_t ipa3_read_flt_hw(struct file *file, char __user *ubuf,
 	int rl;
 	int rules_num;
 	struct ipahal_flt_rule_entry *rules;
-	enum ipa_ip_type ip = (enum ipa_ip_type)file->private_data;
+	enum ipa_ip_type ip = (enum ipa_ip_type)(long)file->private_data;
 	u32 rt_tbl_idx;
 	u32 bitmap;
 	int res = 0;
@@ -1234,7 +1234,7 @@ static ssize_t ipa3_read_stats(struct file *file, char __user *ubuf,
 		connect |= (ipa3_ctx->ep[i].valid << i);
 
 	nbytes = scnprintf(dbg_buff, IPA_MAX_MSG_LEN,
-		"sw_tx=%u\n"
+		"sw_tx=%s\n"
 		"hw_tx=%u\n"
 		"tx_non_linear=%u\n"
 		"tx_compl=%u\n"
@@ -1249,8 +1249,9 @@ static ssize_t ipa3_read_stats(struct file *file, char __user *ubuf,
 		"lan_rx_empty=%u\n"
 		"lan_repl_rx_empty=%u\n"
 		"flow_enable=%u\n"
-		"flow_disable=%u\n",
-		"rx_page_drop_cnt=%u\n",
+		"flow_disable=%u\n"
+		"rx_page_drop_cnt=%u\n"
+		"zero_len_frag_pkt_cnt=%u\n",
 		ipa3_ctx->stats.tx_sw_pkts,
 		ipa3_ctx->stats.tx_hw_pkts,
 		ipa3_ctx->stats.tx_non_linear,
@@ -1267,7 +1268,8 @@ static ssize_t ipa3_read_stats(struct file *file, char __user *ubuf,
 		ipa3_ctx->stats.lan_repl_rx_empty,
 		ipa3_ctx->stats.flow_enable,
 		ipa3_ctx->stats.flow_disable,
-		ipa3_ctx->stats.rx_page_drop_cnt);
+		ipa3_ctx->stats.rx_page_drop_cnt,
+		ipa3_ctx->stats.zero_len_frag_pkt_cnt);
 	cnt += nbytes;
 
 	for (i = 0; i < IPAHAL_PKT_STATUS_EXCEPTION_MAX; i++) {

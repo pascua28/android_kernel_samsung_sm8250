@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
  */
 
 /*
@@ -389,6 +389,7 @@ static int bt_configure_gpios(int on)
 		if (rc) {
 			BT_PWR_ERR("%s:bt_enable_bt_reset_gpios_safely failed",
 				__func__);
+			return rc;
 		}
 
 		msleep(50);
@@ -448,10 +449,6 @@ static void bt_free_gpios(void)
 {
 	if (bt_power_pdata->bt_gpio_sys_rst > 0)
 		gpio_free(bt_power_pdata->bt_gpio_sys_rst);
-	if (bt_power_pdata->wl_gpio_sys_rst > 0)
-		gpio_free(bt_power_pdata->wl_gpio_sys_rst);
-	if  (bt_power_pdata->bt_gpio_sw_ctrl  >  0)
-		gpio_free(bt_power_pdata->bt_gpio_sw_ctrl);
 	if  (bt_power_pdata->bt_gpio_debug  >  0)
 		gpio_free(bt_power_pdata->bt_gpio_debug);
 }
@@ -1093,8 +1090,8 @@ static void  set_pwr_srcs_status(int ldo_index,
 		if (handle->is_enabled && regulator_is_enabled(handle->reg)) {
 			bt_power_src_status[ldo_index] =
 				(int)regulator_get_voltage(handle->reg);
-			BT_PWR_ERR("%s(%d) value(%d)", handle->name,
-				handle, bt_power_src_status[ldo_index]);
+			BT_PWR_ERR("%s value(%d)", handle->name,
+				bt_power_src_status[ldo_index]);
 		} else {
 			BT_PWR_ERR("%s: %s is_enabled %d", __func__,
 				handle->name, handle->is_enabled);
@@ -1160,7 +1157,9 @@ static long bt_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			soc_id = chipset_version;
 			if (soc_id == QCA_HSP_SOC_ID_0100 ||
 				soc_id == QCA_HSP_SOC_ID_0110 ||
-				soc_id == QCA_HSP_SOC_ID_0200) {
+				soc_id == QCA_HSP_SOC_ID_0200 ||
+				soc_id == QCA_HSP_SOC_ID_0210 ||
+				soc_id == QCA_HSP_SOC_ID_1211) {
 				ret = bt_disable_asd();
 			}
 		} else {

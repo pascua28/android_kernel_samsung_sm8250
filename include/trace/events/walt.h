@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifdef CONFIG_SCHED_WALT
@@ -281,7 +281,7 @@ TRACE_EVENT(sched_update_task_ravg,
 		__entry->prev_top	= rq->prev_top;
 	),
 
-	    TP_printk("wc %llu ws %llu delta %llu event %s cpu %d cur_freq %u cur_pid %d task %d (%s) ms %llu delta %llu demand %u coloc_demand: %u sum %u irqtime %llu pred_demand %u rq_cs %llu rq_ps %llu cur_window %u (%s) prev_window %u (%s) nt_cs %llu nt_ps %llu active_time %u grp_cs %lld grp_ps %lld, grp_nt_cs %llu, grp_nt_ps: %llu curr_top %u prev_top %u",
+	    TP_printk("wc %llu ws %llu delta %llu event %s cpu %d cur_freq %u cur_pid %d task %d (%s) ms %llu delta %llu demand %u coloc_demand: %u sum %u irqtime %llu pred_demand %u rq_cs %llu rq_ps %llu cur_window %u (%s) prev_window %u (%s) nt_cs %llu nt_ps %llu active_time %llu grp_cs %lld grp_ps %lld, grp_nt_cs %llu, grp_nt_ps: %llu curr_top %u prev_top %u",
 		__entry->wallclock, __entry->win_start, __entry->delta,
 		task_event_names[__entry->evt], __entry->cpu,
 		__entry->cur_freq, __entry->cur_pid,
@@ -538,4 +538,22 @@ TRACE_EVENT(sched_load_to_gov,
 		__entry->nt_ps, __entry->grp_nt_ps, __entry->pl, __entry->load,
 		__entry->big_task_rotation, __entry->user_hint)
 );
+
+TRACE_EVENT(walt_window_rollover,
+
+	TP_PROTO(u64 window_start),
+
+	TP_ARGS(window_start),
+
+	TP_STRUCT__entry(
+		__field(u64, window_start)
+	),
+
+	TP_fast_assign(
+		__entry->window_start = window_start;
+	),
+
+	TP_printk("window_start=%llu", __entry->window_start)
+);
+
 #endif

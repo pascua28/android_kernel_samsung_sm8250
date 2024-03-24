@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2002,2007-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2002,2007-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 #ifndef __KGSL_DEVICE_H
 #define __KGSL_DEVICE_H
@@ -49,7 +50,6 @@ enum kgsl_event_results {
 	KGSL_EVENT_CANCELLED = 2,
 };
 
-#define KGSL_FLAG_WAKE_ON_TOUCH   BIT(0)
 #define KGSL_FLAG_SPARSE          BIT(1)
 #define KGSL_FLAG_USE_SHMEM       BIT(2)
 #define KGSL_FLAG_PROCESS_RECLAIM BIT(3)
@@ -100,7 +100,6 @@ struct kgsl_device_private;
 struct kgsl_context;
 struct kgsl_power_stats;
 struct kgsl_event;
-struct kgsl_snapshot;
 
 struct kgsl_functable {
 	/* Mandatory functions - these functions must be implemented
@@ -132,8 +131,6 @@ struct kgsl_functable {
 	void (*power_stats)(struct kgsl_device *device,
 		struct kgsl_power_stats *stats);
 	unsigned int (*gpuid)(struct kgsl_device *device, unsigned int *chipid);
-	void (*snapshot)(struct kgsl_device *device,
-		struct kgsl_snapshot *snapshot, struct kgsl_context *context);
 	irqreturn_t (*irq_handler)(struct kgsl_device *device);
 	int (*drain)(struct kgsl_device *device);
 	struct kgsl_device_private * (*device_private_create)(void);
@@ -285,26 +282,6 @@ struct kgsl_device {
 	struct idr context_idr;
 	rwlock_t context_lock;
 
-	struct {
-		void *ptr;
-		u32 size;
-	} snapshot_memory;
-
-	struct kgsl_snapshot *snapshot;
-
-	u32 snapshot_faultcount;	/* Total number of faults since boot */
-	bool force_panic;		/* Force panic after snapshot dump */
-	bool skip_ib_capture;		/* Skip IB capture after snapshot */
-	bool prioritize_unrecoverable;	/* Overwrite with new GMU snapshots */
-	bool set_isdb_breakpoint;	/* Set isdb registers before snapshot */
-
-	/* Use CP Crash dumper to get GPU snapshot*/
-	bool snapshot_crashdumper;
-	/* Use HOST side register reads to get GPU snapshot*/
-	bool snapshot_legacy;
-
-	struct kobject snapshot_kobj;
-
 	struct kobject ppd_kobj;
 
 	struct kgsl_pwrscale pwrscale;
@@ -322,6 +299,10 @@ struct kgsl_device {
 	unsigned int num_l3_pwrlevels;
 	/* store current L3 vote to determine if we should change our vote */
 	unsigned int cur_l3_pwrlevel;
+	/** @timelines: Iterator for assigning IDs to timelines */
+	struct idr timelines;
+	/** @timelines_lock: Spinlock to protect the timelines idr */
+	spinlock_t timelines_lock;
 };
 
 #define KGSL_MMU_DEVICE(_mmu) \
@@ -549,24 +530,6 @@ struct kgsl_snapshot {
 	struct kgsl_device *device;
 };
 
-/**
- * struct kgsl_snapshot_object  - GPU memory in the snapshot
- * @gpuaddr: The GPU address identified during snapshot
- * @size: The buffer size identified during snapshot
- * @offset: offset from start of the allocated kgsl_mem_entry
- * @type: SNAPSHOT_OBJ_TYPE_* identifier.
- * @entry: the reference counted memory entry for this buffer
- * @node: node for kgsl_snapshot.obj_list
- */
-struct kgsl_snapshot_object {
-	uint64_t gpuaddr;
-	uint64_t size;
-	uint64_t offset;
-	int type;
-	struct kgsl_mem_entry *entry;
-	struct list_head node;
-};
-
 struct kgsl_device *kgsl_get_device(int dev_idx);
 
 static inline void kgsl_process_add_stats(struct kgsl_process_private *priv,
@@ -681,11 +644,6 @@ void kgsl_device_platform_remove(struct kgsl_device *device);
 
 const char *kgsl_pwrstate_to_str(unsigned int state);
 
-int kgsl_device_snapshot_init(struct kgsl_device *device);
-void kgsl_device_snapshot(struct kgsl_device *device,
-			struct kgsl_context *context, bool gmu_fault);
-void kgsl_device_snapshot_close(struct kgsl_device *device);
-
 void kgsl_events_init(void);
 void kgsl_events_exit(void);
 
@@ -709,8 +667,11 @@ bool kgsl_event_pending(struct kgsl_device *device,
 		kgsl_event_func func, void *priv);
 int kgsl_add_event(struct kgsl_device *device, struct kgsl_event_group *group,
 		unsigned int timestamp, kgsl_event_func func, void *priv);
+int kgsl_add_low_prio_event(struct kgsl_device *device,
+		struct kgsl_event_group *group, unsigned int timestamp,
+		kgsl_event_func func, void *priv);
 void kgsl_process_event_group(struct kgsl_device *device,
-	struct kgsl_event_group *group);
+		struct kgsl_event_group *group);
 void kgsl_flush_event_group(struct kgsl_device *device,
 		struct kgsl_event_group *group);
 void kgsl_process_event_groups(struct kgsl_device *device);

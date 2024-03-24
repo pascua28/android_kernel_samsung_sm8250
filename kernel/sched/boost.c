@@ -6,6 +6,7 @@
 #include "sched.h"
 #include "walt.h"
 #include <linux/of.h>
+#include <linux/binfmts.h>
 #include <linux/sched/core_ctl.h>
 #include <trace/events/sched.h>
 
@@ -46,7 +47,7 @@ static void set_boost_policy(int type)
 		return;
 	}
 
-	if (min_possible_efficiency != max_possible_efficiency) {
+	if (CONFIG_ARCH_KONA) {
 		boost_policy = SCHED_BOOST_ON_BIG;
 		return;
 	}
@@ -66,13 +67,13 @@ static void sched_no_boost_nop(void)
 static void sched_full_throttle_boost_enter(void)
 {
 	core_ctl_set_boost(true);
-	walt_enable_frequency_aggregation(true);
+	//walt_enable_frequency_aggregation(true);
 }
 
 static void sched_full_throttle_boost_exit(void)
 {
 	core_ctl_set_boost(false);
-	walt_enable_frequency_aggregation(false);
+	//walt_enable_frequency_aggregation(false);
 }
 
 static void sched_conservative_boost_enter(void)
@@ -87,12 +88,12 @@ static void sched_conservative_boost_exit(void)
 
 static void sched_restrained_boost_enter(void)
 {
-	walt_enable_frequency_aggregation(true);
+	//walt_enable_frequency_aggregation(true);
 }
 
 static void sched_restrained_boost_exit(void)
 {
-	walt_enable_frequency_aggregation(false);
+	//walt_enable_frequency_aggregation(false);
 }
 
 struct sched_boost_data {
@@ -148,7 +149,6 @@ static void sched_boost_disable(int type)
 	struct sched_boost_data *sb = &sched_boosts[type];
 	int next_boost, prev_boost = sched_boost_type;
 
-
 	if (sb->refcount <= 0)
 		return;
 
@@ -157,17 +157,15 @@ static void sched_boost_disable(int type)
 	if (sb->refcount)
 		return;
 
+	next_boost = sched_effective_boost();
+	if (next_boost == prev_boost)
+		return;
 	/*
 	 * This boost's refcount becomes zero, so it must
 	 * be disabled. Disable it first and then apply
 	 * the next boost.
 	 */
-	sb->exit();
-
-	next_boost = sched_effective_boost();
-	if(next_boost == prev_boost)
-		return;
-
+	sched_boosts[prev_boost].exit();
 	sched_boosts[next_boost].enter();
 }
 
@@ -267,6 +265,9 @@ int sched_boost_handler(struct ctl_table *table, int write,
 {
 	int ret;
 	unsigned int *data = (unsigned int *)table->data;
+
+	if (task_is_booster(current))
+		return 0;
 
 	mutex_lock(&boost_mutex);
 

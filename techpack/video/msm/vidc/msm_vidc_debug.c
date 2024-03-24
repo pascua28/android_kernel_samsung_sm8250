@@ -10,8 +10,7 @@
 #include "vidc_hfi_api.h"
 #include <linux/of_fdt.h>
 
-int msm_vidc_debug = VIDC_ERR | VIDC_PRINTK |
-	FW_ERROR | FW_FATAL | FW_FTRACE;
+int msm_vidc_debug = 0;
 EXPORT_SYMBOL(msm_vidc_debug);
 
 bool msm_vidc_lossless_encode = !true;
@@ -164,7 +163,7 @@ static ssize_t debug_level_write(struct file *filp, const char __user *buf,
 
 	/* filter partial writes and invalid commands */
 	if (*ppos != 0 || count >= sizeof(kbuf) || count == 0) {
-		d_vpr_e("returning error - pos %d, count %d\n", *ppos, count);
+		d_vpr_e("returning error - pos %lld, count %lu\n", *ppos, count);
 		rc = -EINVAL;
 	}
 

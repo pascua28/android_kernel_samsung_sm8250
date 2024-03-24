@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 /* soc/qcom/cmd-db.h needs types.h */
@@ -388,6 +389,7 @@ static int a6xx_gmu_start(struct kgsl_device *device)
 	gmu_core_regwrite(device, A6XX_GMU_CM3_SYSRESET, 0);
 	/* Make sure the request completes before continuing */
 	wmb();
+
 	if (timed_poll_check(device,
 			A6XX_GMU_CM3_FW_INIT_RESULT,
 			val, GMU_START_TIMEOUT, mask)) {
@@ -833,6 +835,9 @@ static bool a6xx_gmu_cx_is_on(struct kgsl_device *device)
 {
 	unsigned int val;
 
+	if (ADRENO_QUIRK(ADRENO_DEVICE(device), ADRENO_QUIRK_CX_GDSC))
+		return regulator_is_enabled(KGSL_GMU_DEVICE(device)->cx_gdsc);
+
 	gmu_core_regread(device, A6XX_GPU_CC_CX_GDSCR, &val);
 	return (val & BIT(31));
 }
@@ -864,7 +869,7 @@ static int a6xx_gmu_gfx_rail_on(struct kgsl_device *device)
 {
 	struct kgsl_pwrctrl *pwr = &device->pwrctrl;
 	struct gmu_device *gmu = KGSL_GMU_DEVICE(device);
-	unsigned int perf_idx = pwr->num_pwrlevels - pwr->default_pwrlevel - 1;
+	unsigned int perf_idx = pwr->num_pwrlevels - 1;
 	uint32_t default_opp = gmu->rpmh_votes.gx_votes[perf_idx];
 
 	gmu_core_regwrite(device, A6XX_GMU_BOOT_SLUMBER_OPTION,
@@ -1166,10 +1171,9 @@ static int a6xx_gmu_load_firmware(struct kgsl_device *device)
 
 	/* GMU fw already saved and verified so do nothing new */
 	if (!gmu->fw_image) {
-		if (a6xx_core->gmufw_name == NULL) {
-			dev_err(&gmu->pdev->dev, "Invalid gmufw_name\n");
+
+		if (a6xx_core->gmufw_name == NULL)
 			return -EINVAL;
-		}
 
 		ret = request_firmware(&gmu->fw_image, a6xx_core->gmufw_name,
 				device->dev);
@@ -1200,7 +1204,7 @@ static int a6xx_gmu_load_firmware(struct kgsl_device *device)
 		offset += sizeof(*blk);
 
 		if (blk->type == GMU_BLK_TYPE_PREALLOC_REQ ||
-				blk->type == GMU_BLK_TYPE_PREALLOC_PERSIST_REQ) {
+			blk->type == GMU_BLK_TYPE_PREALLOC_PERSIST_REQ) {
 			ret = gmu_prealloc_req(device, blk);
 
 			if (ret)
@@ -1286,8 +1290,8 @@ static int a6xx_gmu_notify_slumber(struct kgsl_device *device)
 	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
 	struct kgsl_pwrctrl *pwr = &device->pwrctrl;
 	struct gmu_device *gmu = KGSL_GMU_DEVICE(device);
-	int bus_level = pwr->pwrlevels[pwr->default_pwrlevel].bus_freq;
-	int perf_idx = gmu->num_gpupwrlevels - pwr->default_pwrlevel - 1;
+	int bus_level = pwr->pwrlevels[pwr->num_pwrlevels - 1].bus_freq;
+	int perf_idx = gmu->num_gpupwrlevels - 1;
 	int ret, state;
 
 	/* Disable the power counter so that the GMU is not busy */
@@ -1624,49 +1628,6 @@ static void a6xx_gmu_snapshot_versions(struct kgsl_device *device,
 				&gmu_vers[i]);
 }
 
-/*
- * a6xx_gmu_snapshot() - A6XX GMU snapshot function
- * @device: Device being snapshotted
- * @snapshot: Pointer to the snapshot instance
- *
- * This is where all of the A6XX GMU specific bits and pieces are grabbed
- * into the snapshot memory
- */
-static void a6xx_gmu_snapshot(struct kgsl_device *device,
-		struct kgsl_snapshot *snapshot)
-{
-	unsigned int val;
-
-	dev_err(device->dev, "GMU snapshot started at 0x%llx ticks\n",
-			a6xx_gmu_read_ao_counter(device));
-	a6xx_gmu_snapshot_versions(device, snapshot);
-
-	a6xx_gmu_snapshot_memories(device, snapshot);
-
-	/* Snapshot tcms as registers for legacy targets */
-	if (adreno_is_a630(ADRENO_DEVICE(device)) ||
-			adreno_is_a615_family(ADRENO_DEVICE(device)))
-		adreno_snapshot_registers(device, snapshot,
-				a6xx_gmu_tcm_registers,
-				ARRAY_SIZE(a6xx_gmu_tcm_registers) / 2);
-
-	adreno_snapshot_registers(device, snapshot, a6xx_gmu_registers,
-					ARRAY_SIZE(a6xx_gmu_registers) / 2);
-
-	if (a6xx_gmu_gx_is_on(device)) {
-		/* Set fence to ALLOW mode so registers can be read */
-		kgsl_regwrite(device, A6XX_GMU_AO_AHB_FENCE_CTRL, 0);
-		/* Make sure the previous write posted before reading */
-		wmb();
-		kgsl_regread(device, A6XX_GMU_AO_AHB_FENCE_CTRL, &val);
-
-		dev_err(device->dev, "set FENCE to ALLOW mode:%x\n", val);
-		adreno_snapshot_registers(device, snapshot,
-				a6xx_gmu_gx_registers,
-				ARRAY_SIZE(a6xx_gmu_gx_registers) / 2);
-	}
-}
-
 static void a6xx_gmu_cooperative_reset(struct kgsl_device *device)
 {
 
@@ -1766,7 +1727,6 @@ struct gmu_dev_ops adreno_a6xx_gmudev = {
 	.wait_for_gmu_idle = a6xx_gmu_wait_for_idle,
 	.ifpc_store = a6xx_gmu_ifpc_store,
 	.ifpc_show = a6xx_gmu_ifpc_show,
-	.snapshot = a6xx_gmu_snapshot,
 	.cooperative_reset = a6xx_gmu_cooperative_reset,
 	.wait_for_active_transition = a6xx_gmu_wait_for_active_transition,
 	.read_ao_counter = a6xx_gmu_read_ao_counter,

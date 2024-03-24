@@ -546,14 +546,11 @@ void rmnet_shs_wq_update_hstat_rps_msk(struct rmnet_shs_wq_hstat_s *hstat_p)
 
 			/* Update ep tput stats while we're here */
 			if (hstat_p->skb_tport_proto == IPPROTO_TCP) {
-				rm_err("SHS_UDP: adding TCP bps %lu to ep_total %lu ep name %s",
+				rm_err("SHS_UDP: adding TCP bps %llu to ep_total %llu ep name %s",
 				       hstat_p->rx_bps, ep->tcp_rx_bps, node_p->dev->name);
 				ep->tcp_rx_bps += hstat_p->rx_bps;
-			} else if (hstat_p->skb_tport_proto == IPPROTO_UDP) {
-				rm_err("SHS_UDP: adding UDP rx_bps %lu to ep_total %lu ep name %s",
-				       hstat_p->rx_bps, ep->udp_rx_bps, node_p->dev->name);
+			} else if (hstat_p->skb_tport_proto == IPPROTO_UDP)
 				ep->udp_rx_bps += hstat_p->rx_bps;
-			}
 			break;
 		}
 	}
@@ -1224,13 +1221,6 @@ int rmnet_shs_wq_check_cpu_move_for_ep(u16 current_cpu, u16 dest_cpu,
 	}
 
 	cpu_in_rps_mask = (1 << dest_cpu) & ep->rps_config_msk;
-
-	rm_err("SHS_MASK:  cur cpu [%d] | dest_cpu [%d] | "
-	       "cpu isolation_mask = 0x%x | ep_rps_mask = 0x%x | "
-	       "cpu_online(dest) = %d cpu_in_rps_mask = %d | "
-	       "cpu isolated(dest) = %d",
-	       current_cpu, dest_cpu, __cpu_isolated_mask, ep->rps_config_msk,
-	       cpu_online(dest_cpu), cpu_in_rps_mask, cpu_isolated(dest_cpu));
 
 	/* We cannot move to dest cpu if the cur cpu is the same,
 	 * the dest cpu is offline, dest cpu is not in the rps mask,
@@ -2012,8 +2002,8 @@ void rmnet_shs_wq_update_stats(void)
 		}
 	}
 	rmnet_shs_wq_refresh_all_cpu_stats();
-	rmnet_shs_wq_refresh_total_stats();
 	rmnet_shs_wq_refresh_dl_mrkr_stats();
+	rmnet_shs_wq_refresh_total_stats();
 
 	if (rmnet_shs_userspace_connected) {
 		rm_err("%s", "SHS_UPDATE: Userspace connected, relying on userspace evaluation");

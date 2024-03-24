@@ -1,8 +1,78 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2011-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2021, The Linux Foundation. All rights reserved.
  */
 
+#define trace_gpu_frequency(...) ((void)0)
+#define trace_kgsl_active_count(...) ((void)0)
+#define trace_kgsl_aux_command(...) ((void)0)
+#define trace_kgsl_buslevel(...) ((void)0)
+#define trace_kgsl_bus(...) ((void)0)
+#define trace_kgsl_clk(...) ((void)0)
+#define trace_kgsl_clock_throttling(...) ((void)0)
+#define trace_kgsl_constraint(...) ((void)0)
+#define trace_kgsl_context_create(...) ((void)0)
+#define trace_kgsl_context_destroy(...) ((void)0)
+#define trace_kgsl_context_detach(...) ((void)0)
+#define trace_kgsl_drawobj_timeline(...) ((void)0)
+#define trace_kgsl_fire_event(...) ((void)0)
+#define trace_kgsl_gmu_oob_clear(...) ((void)0)
+#define trace_kgsl_gmu_oob_set(...) ((void)0)
+#define trace_kgsl_gpubusy(...) ((void)0)
+#define trace_kgsl_hfi_receive(...) ((void)0)
+#define trace_kgsl_hfi_send(...) ((void)0)
+#define trace_kgsl_irq(...) ((void)0)
+#define trace_kgsl_issueibcmds(...) ((void)0)
+#define trace_kgsl_mem_alloc(...) ((void)0)
+#define trace_kgsl_mem_free(...) ((void)0)
+#define trace_kgsl_mem_map(...) ((void)0)
+#define trace_kgsl_mem_mmap(...) ((void)0)
+#define trace_kgsl_mem_sync_cache(...) ((void)0)
+#define trace_kgsl_mem_sync_full_cache(...) ((void)0)
+#define trace_kgsl_mem_timestamp_free(...) ((void)0)
+#define trace_kgsl_mem_timestamp_queue(...) ((void)0)
+#define trace_kgsl_mem_unmapped_area_collision(...) ((void)0)
+#define trace_kgsl_mmu_pagefault(...) ((void)0)
+#define trace_kgsl_msg(...) ((void)0)
+#define trace_kgsl_opp_notify(...) ((void)0)
+#define trace_kgsl_pagetable_destroy(...) ((void)0)
+#define trace_kgsl_pool_add_page(...) ((void)0)
+#define trace_kgsl_pool_alloc_page_system(...) ((void)0)
+#define trace_kgsl_pool_free_page(...) ((void)0)
+#define trace_kgsl_pool_get_page(...) ((void)0)
+#define trace_kgsl_pool_try_page_lower(...) ((void)0)
+#define trace_kgsl_popp_level(...) ((void)0)
+#define trace_kgsl_popp_mod(...) ((void)0)
+#define trace_kgsl_popp_nap(...) ((void)0)
+#define trace_kgsl_pwrlevel(...) ((void)0)
+#define trace_kgsl_pwrstats(...) ((void)0)
+#define trace_kgsl_pwr_request_state(...) ((void)0)
+#define trace_kgsl_pwr_set_state(...) ((void)0)
+#define trace_kgsl_rail(...) ((void)0)
+#define trace_kgsl_readtimestamp(...) ((void)0)
+#define trace_kgsl_register_event(...) ((void)0)
+#define trace_kgsl_regwrite(...) ((void)0)
+#define trace_kgsl_timeline_alloc(...) ((void)0)
+#define trace_kgsl_timeline_destroy(...) ((void)0)
+#define trace_kgsl_timeline_fence_alloc(...) ((void)0)
+#define trace_kgsl_timeline_fence_release(...) ((void)0)
+#define trace_kgsl_timeline_signal(...) ((void)0)
+#define trace_kgsl_timeline_wait(...) ((void)0)
+#define trace_kgsl_user_pwrlevel_constraint(...) ((void)0)
+#define trace_kgsl_waittimestamp_entry(...) ((void)0)
+#define trace_kgsl_waittimestamp_exit(...) ((void)0)
+#define trace_sparse_bind(...) ((void)0)
+#define trace_sparse_phys_alloc(...) ((void)0)
+#define trace_sparse_phys_free(...) ((void)0)
+#define trace_sparse_unbind(...) ((void)0)
+#define trace_sparse_virt_alloc(...) ((void)0)
+#define trace_sparse_virt_free(...) ((void)0)
+#define trace_syncpoint_fence(...) ((void)0)
+#define trace_syncpoint_fence_expire(...) ((void)0)
+#define trace_syncpoint_timestamp(...) ((void)0)
+#define trace_syncpoint_timestamp_expire(...) ((void)0)
+
+#if 0
 #if !defined(_KGSL_TRACE_H) || defined(TRACE_HEADER_MULTI_READ)
 #define _KGSL_TRACE_H
 
@@ -866,106 +936,40 @@ TRACE_EVENT(kgsl_regwrite,
 	)
 );
 
-TRACE_EVENT(kgsl_popp_level,
-
-	TP_PROTO(struct kgsl_device *device, int level1, int level2),
-
-	TP_ARGS(device, level1, level2),
-
-	TP_STRUCT__entry(
-		__string(device_name, device->name)
-		__field(int, level1)
-		__field(int, level2)
-	),
-
-	TP_fast_assign(
-		__assign_str(device_name, device->name);
-		__entry->level1 = level1;
-		__entry->level2 = level2;
-	),
-
-	TP_printk(
-		"d_name=%s old level=%d new level=%d",
-		__get_str(device_name), __entry->level1, __entry->level2)
-);
-
-TRACE_EVENT(kgsl_popp_mod,
-
-	TP_PROTO(struct kgsl_device *device, int x, int y),
-
-	TP_ARGS(device, x, y),
-
-	TP_STRUCT__entry(
-		__string(device_name, device->name)
-		__field(int, x)
-		__field(int, y)
-	),
-
-	TP_fast_assign(
-		__assign_str(device_name, device->name);
-		__entry->x = x;
-		__entry->y = y;
-	),
-
-	TP_printk(
-		"d_name=%s GPU busy mod=%d bus busy mod=%d",
-		__get_str(device_name), __entry->x, __entry->y)
-);
-
-TRACE_EVENT(kgsl_popp_nap,
-
-	TP_PROTO(struct kgsl_device *device, int t, int nap, int percent),
-
-	TP_ARGS(device, t, nap, percent),
-
-	TP_STRUCT__entry(
-		__string(device_name, device->name)
-		__field(int, t)
-		__field(int, nap)
-		__field(int, percent)
-	),
-
-	TP_fast_assign(
-		__assign_str(device_name, device->name);
-		__entry->t = t;
-		__entry->nap = nap;
-		__entry->percent = percent;
-	),
-
-	TP_printk(
-		"d_name=%s nap time=%d number of naps=%d percentage=%d",
-		__get_str(device_name), __entry->t, __entry->nap,
-			__entry->percent)
-);
-
 TRACE_EVENT(kgsl_register_event,
-		TP_PROTO(unsigned int id, unsigned int timestamp, void *func),
-		TP_ARGS(id, timestamp, func),
+		TP_PROTO(unsigned int id, unsigned int timestamp, void *func,
+			enum kgsl_priority prio),
+		TP_ARGS(id, timestamp, func, prio),
 		TP_STRUCT__entry(
 			__field(unsigned int, id)
 			__field(unsigned int, timestamp)
 			__field(void *, func)
+			__field(enum kgsl_priority, prio)
 		),
 		TP_fast_assign(
 			__entry->id = id;
 			__entry->timestamp = timestamp;
 			__entry->func = func;
+			__entry->prio = prio;
 		),
 		TP_printk(
-			"ctx=%u ts=%u cb=%pS",
-			__entry->id, __entry->timestamp, __entry->func)
+			"ctx=%u ts=%u cb=%pF prio=%s",
+			__entry->id, __entry->timestamp, __entry->func,
+			prio_to_string(__entry->prio))
 );
 
 TRACE_EVENT(kgsl_fire_event,
 		TP_PROTO(unsigned int id, unsigned int ts,
-			unsigned int type, unsigned int age, void *func),
-		TP_ARGS(id, ts, type, age, func),
+			unsigned int type, unsigned int age, void *func,
+			enum kgsl_priority prio),
+		TP_ARGS(id, ts, type, age, func, prio),
 		TP_STRUCT__entry(
 			__field(unsigned int, id)
 			__field(unsigned int, ts)
 			__field(unsigned int, type)
 			__field(unsigned int, age)
 			__field(void *, func)
+			__field(enum kgsl_priority, prio)
 		),
 		TP_fast_assign(
 			__entry->id = id;
@@ -973,12 +977,14 @@ TRACE_EVENT(kgsl_fire_event,
 			__entry->type = type;
 			__entry->age = age;
 			__entry->func = func;
+			__entry->prio = prio;
 		),
 		TP_printk(
-			"ctx=%u ts=%u type=%s age=%u cb=%pS",
+			"ctx=%u ts=%u type=%s age=%u cb=%pF prio=%s",
 			__entry->id, __entry->ts,
 			__print_symbolic(__entry->type, KGSL_EVENT_TYPES),
-			__entry->age, __entry->func)
+			__entry->age, __entry->func,
+			prio_to_string(__entry->prio))
 );
 
 TRACE_EVENT(kgsl_active_count,
@@ -1292,7 +1298,185 @@ TRACE_EVENT(kgsl_opp_notify,
 		__entry->min_freq, __entry->max_freq
 	)
 );
+
+TRACE_EVENT(kgsl_timeline_alloc,
+	TP_PROTO(
+		u32 id,
+		u64 seqno
+	),
+	TP_ARGS(
+		id,
+		seqno
+	),
+	TP_STRUCT__entry(
+		__field(u32, id)
+		__field(u64, seqno)
+	),
+	TP_fast_assign(
+		__entry->id = id;
+		__entry->seqno = seqno;
+	),
+	TP_printk("id=%u initial=%llu",
+		__entry->id, __entry->seqno
+	)
+);
+
+TRACE_EVENT(kgsl_timeline_destroy,
+	TP_PROTO(
+		u32 id
+	),
+	TP_ARGS(
+		id
+	),
+	TP_STRUCT__entry(
+		__field(u32, id)
+	),
+	TP_fast_assign(
+		__entry->id = id;
+	),
+	TP_printk("id=%u",
+		__entry->id
+	)
+);
+
+
+TRACE_EVENT(kgsl_timeline_signal,
+	TP_PROTO(
+		u32 id,
+		u64 seqno
+	),
+	TP_ARGS(
+		id,
+		seqno
+	),
+	TP_STRUCT__entry(
+		__field(u32, id)
+		__field(u64, seqno)
+	),
+	TP_fast_assign(
+		__entry->id = id;
+		__entry->seqno = seqno;
+	),
+	TP_printk("id=%u seqno=%llu",
+		__entry->id, __entry->seqno
+	)
+);
+
+TRACE_EVENT(kgsl_timeline_fence_alloc,
+	TP_PROTO(
+		u32 timeline,
+		u64 seqno
+	),
+	TP_ARGS(
+		timeline,
+		seqno
+	),
+	TP_STRUCT__entry(
+		__field(u32, timeline)
+		__field(u64, seqno)
+	),
+	TP_fast_assign(
+		__entry->timeline = timeline;
+		__entry->seqno = seqno;
+	),
+	TP_printk("timeline=%u seqno=%llu",
+		__entry->timeline, __entry->seqno
+	)
+);
+
+TRACE_EVENT(kgsl_timeline_fence_release,
+	TP_PROTO(
+		u32 timeline,
+		u64 seqno
+	),
+	TP_ARGS(
+		timeline,
+		seqno
+	),
+	TP_STRUCT__entry(
+		__field(u32, timeline)
+		__field(u64, seqno)
+	),
+	TP_fast_assign(
+		__entry->timeline = timeline;
+		__entry->seqno = seqno;
+	),
+	TP_printk("timeline=%u seqno=%llu",
+		__entry->timeline, __entry->seqno
+	)
+);
+
+
+TRACE_EVENT(kgsl_timeline_wait,
+	TP_PROTO(
+		u32 flags,
+		s64 tv_sec,
+		s64 tv_nsec
+	),
+	TP_ARGS(
+		flags,
+		tv_sec,
+		tv_nsec
+	),
+	TP_STRUCT__entry(
+		__field(u32, flags)
+		__field(s64, tv_sec)
+		__field(s64, tv_nsec)
+	),
+	TP_fast_assign(
+		__entry->flags = flags;
+		__entry->tv_sec = tv_sec;
+		__entry->tv_nsec = tv_nsec;
+	),
+	TP_printk("flags=0x%x tv_sec=%llu tv_nsec=%llu",
+		__entry->flags, __entry->tv_sec, __entry->tv_nsec
+
+	)
+);
+
+TRACE_EVENT(kgsl_aux_command,
+	TP_PROTO(u32 drawctxt_id, u32 numcmds, u32 flags, u32 timestamp
+	),
+	TP_ARGS(drawctxt_id, numcmds, flags, timestamp
+	),
+	TP_STRUCT__entry(
+		__field(u32, drawctxt_id)
+		__field(u32, numcmds)
+		__field(u32, flags)
+		__field(u32, timestamp)
+	),
+	TP_fast_assign(
+		__entry->drawctxt_id = drawctxt_id;
+		__entry->numcmds = numcmds;
+		__entry->flags = flags;
+		__entry->timestamp = timestamp;
+	),
+	TP_printk("context=%u numcmds=%u flags=0x%x timestamp=%u",
+		__entry->drawctxt_id, __entry->numcmds, __entry->flags,
+		__entry->timestamp
+	)
+);
+
+TRACE_EVENT(kgsl_drawobj_timeline,
+	TP_PROTO(u32 timeline, u64 seqno
+	),
+	TP_ARGS(timeline, seqno
+	),
+	TP_STRUCT__entry(
+		__field(u32, timeline)
+		__field(u64, seqno)
+	),
+	TP_fast_assign(
+		__entry->timeline = timeline;
+		__entry->seqno = seqno;
+	),
+	TP_printk("timeline=%u seqno=%llu",
+		__entry->timeline, __entry->seqno
+	)
+);
+
 #endif /* _KGSL_TRACE_H */
 
 /* This part must be outside protection */
 #include <trace/define_trace.h>
+#endif

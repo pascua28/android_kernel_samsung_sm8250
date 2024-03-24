@@ -21,6 +21,8 @@ KCOV_INSTRUMENT_memcontrol.o := n
 KCOV_INSTRUMENT_mmzone.o := n
 KCOV_INSTRUMENT_vmstat.o := n
 
+ccflags-y += -O3
+
 mmu-y			:= nommu.o
 mmu-$(CONFIG_MMU)	:= gup.o highmem.o memory.o mincore.o \
 			   mlock.o mmap.o mprotect.o mremap.o msync.o \
@@ -123,3 +125,4 @@ obj-$(CONFIG_PAGE_BOOST_RECORDING) += io_record.o
 CFLAGS_backing-dev.o = -Wformat
 CFLAGS_page-writeback.o = -Wformat
 
+CFLAGS_kmemleak.o += -DCONFIG_DEBUG_FS

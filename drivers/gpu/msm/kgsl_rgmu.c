@@ -174,7 +174,7 @@ static int rgmu_enable_clks(struct kgsl_device *device)
 
 	/* Let us set gpu clk to default power level */
 	ret = rgmu_clk_set_rate(rgmu->gpu_clk,
-			rgmu->gpu_freqs[pwr->default_pwrlevel]);
+			rgmu->gpu_freqs[pwr->num_pwrlevels - 1]);
 	if (ret)
 		return ret;
 
@@ -260,8 +260,6 @@ static void rgmu_snapshot(struct kgsl_device *device)
 	 * be collapsed while dumping snapshot.
 	 */
 	gmu_dev_ops->halt_execution(device);
-
-	kgsl_device_snapshot(device, NULL, true);
 
 	adreno_write_gmureg(adreno_dev,
 			ADRENO_REG_GMU_GMU2HOST_INTR_CLR, 0xFFFFFFFF);

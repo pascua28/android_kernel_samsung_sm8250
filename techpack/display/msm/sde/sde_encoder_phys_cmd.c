@@ -184,8 +184,6 @@ static void sde_encoder_phys_cmd_pp_tx_done_irq(void *arg, int irq_idx)
 {
 	struct sde_encoder_phys *phys_enc = arg;
 	u32 scheduler_status = INVALID_CTL_STATUS;
-	struct sde_encoder_phys_cmd *cmd_enc;
-	struct sde_hw_pp_vsync_info info[MAX_CHANNELS_PER_ENC] = {{0}};
 	struct sde_hw_ctl *ctl;
 	u32 event = 0;
 
@@ -193,7 +191,6 @@ static void sde_encoder_phys_cmd_pp_tx_done_irq(void *arg, int irq_idx)
 		return;
 
 	SDE_ATRACE_BEGIN("pp_done_irq");
-	cmd_enc = to_sde_encoder_phys_cmd(phys_enc);
 	ctl = phys_enc->hw_ctl;
 
 	if (ctl && ctl->ops.get_scheduler_status)
@@ -209,15 +206,6 @@ static void sde_encoder_phys_cmd_pp_tx_done_irq(void *arg, int irq_idx)
 				phys_enc, event);
 		spin_unlock(phys_enc->enc_spinlock);
 	}
-
-	sde_encoder_helper_get_pp_line_count(phys_enc->parent, info);
-	SDE_EVT32_IRQ(DRMID(phys_enc->parent),
-		phys_enc->hw_pp->idx - PINGPONG_0, event,
-		info[0].pp_idx, info[0].intf_idx,
-		info[0].wr_ptr_line_count, info[0].intf_frame_count,
-		info[1].pp_idx, info[1].intf_idx,
-		info[1].wr_ptr_line_count, info[1].intf_frame_count,
-		scheduler_status);
 
 	if (scheduler_status == 0x30)
 		global_flag = 0;	//P200728-01222 disable debug patch from 04710138 due to sluggish issue.
@@ -258,7 +246,6 @@ static void sde_encoder_phys_cmd_te_rd_ptr_irq(void *arg, int irq_idx)
 	struct sde_encoder_phys_cmd *cmd_enc;
 	u32 scheduler_status = INVALID_CTL_STATUS;
 	struct sde_hw_ctl *ctl;
-	struct sde_hw_pp_vsync_info info[MAX_CHANNELS_PER_ENC] = {{0}};
 	struct sde_encoder_phys_cmd_te_timestamp *te_timestamp;
 	unsigned long lock_flags;
 
@@ -307,22 +294,7 @@ static void sde_encoder_phys_cmd_te_rd_ptr_irq(void *arg, int irq_idx)
 	}
 	spin_unlock_irqrestore(phys_enc->enc_spinlock, lock_flags);
 
-	sde_encoder_helper_get_pp_line_count(phys_enc->parent, info);
-	SDE_EVT32_IRQ(DRMID(phys_enc->parent),
-		info[0].pp_idx, info[0].intf_idx,
-		info[0].wr_ptr_line_count, info[0].intf_frame_count,
-		info[1].pp_idx, info[1].intf_idx,
-		info[1].wr_ptr_line_count, info[1].intf_frame_count,
-		scheduler_status);
-
-
 #if defined(CONFIG_DISPLAY_SAMSUNG)
-	/* case 05295952: detect MDP clock underflow that causes line noise */
-	if (vdd && info[0].wr_ptr_line_count > (phys_enc->cached_mode.vdisplay/3) &&
-			info[0].wr_ptr_line_count < phys_enc->cached_mode.vdisplay)
-		SS_XLOG(info[0].wr_ptr_line_count, ++vdd->cnt_mdp_clk_underflow);
-
-
 	if (vdd && vdd->vrr.support_te_mod && vdd->vrr.te_mod_on && vdd->vrr.te_mod_divider > 0) {
 		vdd->vrr.te_mod_cnt = (vdd->vrr.te_mod_cnt + 1) % vdd->vrr.te_mod_divider;
 
@@ -369,7 +341,6 @@ static void sde_encoder_phys_cmd_wr_ptr_irq(void *arg, int irq_idx)
 	struct sde_encoder_phys *phys_enc = arg;
 	struct sde_hw_ctl *ctl;
 	u32 event = 0;
-	struct sde_hw_pp_vsync_info info[MAX_CHANNELS_PER_ENC] = {{0}};
 
 	if (!phys_enc || !phys_enc->hw_ctl)
 		return;
@@ -386,12 +357,6 @@ static void sde_encoder_phys_cmd_wr_ptr_irq(void *arg, int irq_idx)
 			spin_unlock(phys_enc->enc_spinlock);
 		}
 	}
-
-	sde_encoder_helper_get_pp_line_count(phys_enc->parent, info);
-	SDE_EVT32_IRQ(DRMID(phys_enc->parent),
-		ctl->idx - CTL_0, event,
-		info[0].pp_idx, info[0].intf_idx, info[0].wr_ptr_line_count,
-		info[1].pp_idx, info[1].intf_idx, info[1].wr_ptr_line_count);
 
 	/* Signal any waiting wr_ptr start interrupt */
 	wake_up_all(&phys_enc->pending_kickoff_wq);
@@ -729,18 +694,17 @@ static int _sde_encoder_phys_cmd_poll_write_pointer_started(
 	}
 
 	if (phys_enc->has_intf_te)
-		ret = hw_intf->ops.get_vsync_info(hw_intf, &info);
+		ret = hw_intf->ops.get_vsync_info(hw_intf, &info, false);
 	else
-		ret = hw_pp->ops.get_vsync_info(hw_pp, &info);
+		ret = hw_pp->ops.get_vsync_info(hw_pp, &info, false);
 
 	if (ret)
 		return ret;
 
 	SDE_DEBUG_CMDENC(cmd_enc,
-			"pp:%d intf:%d rd_ptr %d wr_ptr %d\n",
+			"pp:%d intf:%d wr_ptr %d\n",
 			phys_enc->hw_pp->idx - PINGPONG_0,
 			phys_enc->hw_intf->idx - INTF_0,
-			info.rd_ptr_line_count,
 			info.wr_ptr_line_count);
 	SDE_EVT32_VERBOSE(DRMID(phys_enc->parent),
 			phys_enc->hw_pp->idx - PINGPONG_0,
@@ -780,13 +744,13 @@ static bool _sde_encoder_phys_cmd_is_ongoing_pptx(
 		if (!hw_intf || !hw_intf->ops.get_vsync_info)
 			return false;
 
-		hw_intf->ops.get_vsync_info(hw_intf, &info);
+		hw_intf->ops.get_vsync_info(hw_intf, &info, true);
 	} else {
 		hw_pp = phys_enc->hw_pp;
 		if (!hw_pp || !hw_pp->ops.get_vsync_info)
 			return false;
 
-		hw_pp->ops.get_vsync_info(hw_pp, &info);
+		hw_pp->ops.get_vsync_info(hw_pp, &info, true);
 	}
 
 	SDE_EVT32(DRMID(phys_enc->parent),
@@ -1004,8 +968,6 @@ end:
 void sde_encoder_phys_cmd_irq_control(struct sde_encoder_phys *phys_enc,
 		bool enable)
 {
-	struct sde_encoder_phys_cmd *cmd_enc;
-
 	if (!phys_enc)
 		return;
 
@@ -1016,8 +978,6 @@ void sde_encoder_phys_cmd_irq_control(struct sde_encoder_phys *phys_enc,
 	if (_sde_encoder_phys_is_ppsplit_slave(phys_enc) ||
 			_sde_encoder_phys_is_disabling_ppsplit_slave(phys_enc))
 		return;
-
-	cmd_enc = to_sde_encoder_phys_cmd(phys_enc);
 
 	SDE_EVT32(DRMID(phys_enc->parent), phys_enc->hw_pp->idx - PINGPONG_0,
 			enable, atomic_read(&phys_enc->vblank_refcount));
@@ -1312,12 +1272,20 @@ static void sde_encoder_phys_cmd_enable(struct sde_encoder_phys *phys_enc)
 static bool sde_encoder_phys_cmd_is_autorefresh_enabled(
 		struct sde_encoder_phys *phys_enc)
 {
+	struct sde_encoder_phys_cmd *cmd_enc;
 	struct sde_hw_pingpong *hw_pp;
 	struct sde_hw_intf *hw_intf;
 	struct sde_hw_autorefresh cfg;
 	int ret;
 
-	if (!phys_enc || !phys_enc->hw_pp || !phys_enc->hw_intf)
+	if (!phys_enc)
+		return false;
+
+	cmd_enc = to_sde_encoder_phys_cmd(phys_enc);
+	if (!cmd_enc->autorefresh.cfg.enable)
+		return false;
+
+	if (!phys_enc->hw_pp || !phys_enc->hw_intf)
 		return false;
 
 	if (!sde_encoder_phys_cmd_is_master(phys_enc))
@@ -1410,14 +1378,14 @@ static int sde_encoder_phys_cmd_get_write_line_count(
 		if (!hw_intf->ops.get_vsync_info)
 			return -EINVAL;
 
-		if (hw_intf->ops.get_vsync_info(hw_intf, &info))
+		if (hw_intf->ops.get_vsync_info(hw_intf, &info, true))
 			return -EINVAL;
 	} else {
 		hw_pp = phys_enc->hw_pp;
 		if (!hw_pp->ops.get_vsync_info)
 			return -EINVAL;
 
-		if (hw_pp->ops.get_vsync_info(hw_pp, &info))
+		if (hw_pp->ops.get_vsync_info(hw_pp, &info, true))
 			return -EINVAL;
 	}
 
@@ -1604,7 +1572,6 @@ static int _sde_encoder_phys_cmd_wait_for_wr_ptr(
 	struct sde_encoder_wait_info wait_info = {0};
 	struct sde_connector *c_conn;
 	bool frame_pending = true;
-	struct sde_hw_ctl *ctl;
 	unsigned long lock_flags;
 	int ret, timeout_ms;
 
@@ -1612,7 +1579,6 @@ static int _sde_encoder_phys_cmd_wait_for_wr_ptr(
 		SDE_ERROR("invalid argument(s)\n");
 		return -EINVAL;
 	}
-	ctl = phys_enc->hw_ctl;
 	c_conn = to_sde_connector(phys_enc->connector);
 	timeout_ms = KICKOFF_TIMEOUT_MS;
 
@@ -1669,12 +1635,9 @@ static int sde_encoder_phys_cmd_wait_for_tx_complete(
 		struct sde_encoder_phys *phys_enc)
 {
 	int rc;
-	struct sde_encoder_phys_cmd *cmd_enc;
 
 	if (!phys_enc)
 		return -EINVAL;
-
-	cmd_enc = to_sde_encoder_phys_cmd(phys_enc);
 
 	if (!atomic_read(&phys_enc->pending_kickoff_cnt)) {
 		SDE_EVT32(DRMID(phys_enc->parent),

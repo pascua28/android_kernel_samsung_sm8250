@@ -177,6 +177,7 @@ static void sde_hw_setup_cdm_output(struct sde_hw_mdp *mdp,
 static bool sde_hw_setup_clk_force_ctrl(struct sde_hw_mdp *mdp,
 		enum sde_clk_ctrl_type clk_ctrl, bool enable)
 {
+	struct sde_clk_ctrl_reg *ctrl_reg;
 	struct sde_hw_blk_reg_map *c;
 	u32 reg_off, bit_off;
 	u32 reg_val, new_val;
@@ -190,8 +191,12 @@ static bool sde_hw_setup_clk_force_ctrl(struct sde_hw_mdp *mdp,
 	if (clk_ctrl <= SDE_CLK_CTRL_NONE || clk_ctrl >= SDE_CLK_CTRL_MAX)
 		return false;
 
-	reg_off = mdp->caps->clk_ctrls[clk_ctrl].reg_off;
-	bit_off = mdp->caps->clk_ctrls[clk_ctrl].bit_off;
+	ctrl_reg = (struct sde_clk_ctrl_reg *)&mdp->caps->clk_ctrls[clk_ctrl];
+	if (cmpxchg(&ctrl_reg->val, !enable, enable) == enable)
+		return enable;
+
+	reg_off = ctrl_reg->reg_off;
+	bit_off = ctrl_reg->bit_off;
 
 	reg_val = SDE_REG_READ(c, reg_off);
 
@@ -521,14 +526,11 @@ static void sde_hw_set_hdr_plus_metadata(struct sde_hw_mdp *mdp,
 
 static u32 sde_hw_get_autorefresh_status(struct sde_hw_mdp *mdp, u32 intf_idx)
 {
-	struct sde_hw_blk_reg_map *c;
 	u32 autorefresh_status;
 	u32 blk_id = (intf_idx == INTF_2) ? 65 : 64;
 
 	if (!mdp)
 		return 0;
-
-	c = &mdp->hw;
 
 	SDE_REG_WRITE(&mdp->hw, MDP_PERIPH_DBGBUS_CTRL,
 			TEST_MASK(blk_id, AUTOREFRESH_TEST_POINT));

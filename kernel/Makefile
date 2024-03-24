@@ -32,11 +32,6 @@ KCOV_INSTRUMENT_kcov.o := n
 KASAN_SANITIZE_kcov.o := n
 CFLAGS_kcov.o := $(call cc-option, -fno-conserve-stack -fno-stack-protector)
 
-ifndef CONFIG_CFI_CLANG
-# cond_syscall is currently not gcc LTO compatible
-CFLAGS_sys_ni.o = $(DISABLE_LTO)
-endif
-
 # Don't instrument error handlers
 CFLAGS_cfi.o = $(DISABLE_CFI_CLANG)
 
@@ -125,14 +120,10 @@ obj-$(CONFIG_HAS_IOMEM) += iomem.o
 obj-$(CONFIG_ZONE_DEVICE) += memremap.o
 obj-$(CONFIG_RSEQ) += rseq.o
 
-obj-$(CONFIG_FAST_TRACK) += ftt/
-
-obj-$(CONFIG_INTELLIGENCE) += intelligence.o
-
 $(obj)/configs.o: $(obj)/config_data.h
 
 targets += config_data.gz
-$(obj)/config_data.gz: out/.config FORCE
+$(obj)/config_data.gz: arch/arm64/configs/vendor/r8q_eur_openx_defconfig FORCE
 	$(call if_changed,gzip)
 
       filechk_ikconfiggz = (echo "static const char kernel_config_data[] __used = MAGIC_START"; cat $< | scripts/bin2c; echo "MAGIC_END;")

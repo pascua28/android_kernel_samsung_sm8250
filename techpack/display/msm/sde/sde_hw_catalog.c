@@ -8,7 +8,6 @@
 #include <linux/of_address.h>
 #include <linux/platform_device.h>
 #include <linux/soc/qcom/llcc-qcom.h>
-#include <linux/pm_qos.h>
 
 #include "sde_hw_mdss.h"
 #include "sde_hw_catalog.h"
@@ -1619,6 +1618,7 @@ static int sde_sspp_parse_dt(struct device_node *np,
 			sde_cfg->mdp[j].clk_ctrls[sspp->clk_ctrl].bit_off =
 				PROP_BITVALUE_ACCESS(prop_value,
 						SSPP_CLK_CTRL, i, 1);
+			sde_cfg->mdp[j].clk_ctrls[sspp->clk_ctrl].val = -1;
 		}
 
 		SDE_DEBUG(
@@ -2132,6 +2132,7 @@ static int sde_wb_parse_dt(struct device_node *np, struct sde_mdss_cfg *sde_cfg)
 			sde_cfg->mdp[j].clk_ctrls[wb->clk_ctrl].bit_off =
 				PROP_BITVALUE_ACCESS(prop_value,
 						WB_CLK_CTRL, i, 1);
+			sde_cfg->mdp[j].clk_ctrls[wb->clk_ctrl].val = -1;
 		}
 
 		wb->format_list = sde_cfg->wb_formats;
@@ -3651,7 +3652,7 @@ static int _sde_qos_parse_dt_cfg(struct sde_mdss_cfg *cfg, int *prop_count,
 			cfg->perf.danger_lut[i] =
 				PROP_VALUE_ACCESS(prop_value,
 						QOS_DANGER_LUT, i);
-			SDE_DEBUG("danger usage:%i lut:0x%x\n",
+			SDE_DEBUG("danger usage:%i lut:0x%llx\n",
 					i, cfg->perf.danger_lut[i]);
 		}
 	}
@@ -3700,7 +3701,7 @@ static int _sde_qos_parse_dt_cfg(struct sde_mdss_cfg *cfg, int *prop_count,
 			cfg->perf.safe_lut[index] =
 				PROP_VALUE_ACCESS(prop_value, safe_key,
 					(j * 2) + 1);
-			SDE_DEBUG("usage:%d creq lut:0x%llx safe:0x%x\n",
+			SDE_DEBUG("usage:%d creq lut:0x%llx safe:0x%llx\n",
 				index, cfg->perf.creq_lut[index],
 				cfg->perf.safe_lut[index]);
 		}
@@ -3843,23 +3844,6 @@ static int _sde_perf_parse_dt_cfg(struct device_node *np,
 
 		cfg->has_cdp = true;
 	}
-
-	cfg->perf.cpu_mask =
-			prop_exists[PERF_CPU_MASK] ?
-			PROP_VALUE_ACCESS(prop_value, PERF_CPU_MASK, 0) :
-			DEFAULT_CPU_MASK;
-	cfg->perf.cpu_mask_perf =
-			prop_exists[CPU_MASK_PERF] ?
-			PROP_VALUE_ACCESS(prop_value, CPU_MASK_PERF, 0) :
-			DEFAULT_CPU_MASK;
-	cfg->perf.cpu_dma_latency =
-			prop_exists[PERF_CPU_DMA_LATENCY] ?
-			PROP_VALUE_ACCESS(prop_value, PERF_CPU_DMA_LATENCY, 0) :
-			DEFAULT_CPU_DMA_LATENCY;
-	cfg->perf.cpu_irq_latency =
-			prop_exists[PERF_CPU_IRQ_LATENCY] ?
-			PROP_VALUE_ACCESS(prop_value, PERF_CPU_IRQ_LATENCY, 0) :
-			PM_QOS_DEFAULT_VALUE;
 
 	return 0;
 }

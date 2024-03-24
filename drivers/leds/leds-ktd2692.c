@@ -204,9 +204,7 @@ ssize_t ktd2692_store(struct device *dev,struct device_attribute *attr, const ch
 		return -EFAULT;
 	}
 
-	LED_INFO("KTD2692-STORE BEFORE:(%d) (%d) (%d)\n", value,buf,global_ktd2692data->sysfs_input_data);
 	global_ktd2692data->sysfs_input_data = value;
-	LED_INFO("KTD2692-STORE AFTER:(%d) (%d)\n", value,global_ktd2692data->sysfs_input_data);
 
 	if (gpio_is_valid(global_ktd2692data->flash_control)) {
 		ret = gpio_request(global_ktd2692data->flash_control, "ktd2692_led_control");
@@ -468,7 +466,6 @@ EXPORT_SYMBOL(ktd2692_led_mode_ctrl);
 
 ssize_t ktd2692_show (struct device *dev,struct device_attribute *attr, char *buf)
 {
-	LED_INFO("KTD2692-SHOW:(%d) (%d)\n", buf,global_ktd2692data->sysfs_input_data);
 	return sprintf(buf, "%d\n", global_ktd2692data->sysfs_input_data);
 }
 EXPORT_SYMBOL(ktd2692_show);

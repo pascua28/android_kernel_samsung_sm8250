@@ -315,10 +315,8 @@ static void a96t3x6_set_enable(struct a96t3x6_data *data, int enable)
 	ret = a96t3x6_i2c_read(data->client, REG_SAR_ENABLE, &reg_value, 1);
 
 	if((pre_enable == 1 && reg_value == CMD_ON) || (pre_enable == 0 && reg_value == CMD_OFF)) {
-		if (pre_enable == enable) {
-			GRIP_INFO("skip\n", __func__);
+		if (pre_enable == enable)
 			return;
-		}
 	}
 
 	if (enable) {
@@ -1095,8 +1093,6 @@ static void a96t3x6_set_debug_work(struct a96t3x6_data *data, u8 enable,
 static void a96t3x6_set_firmware_work(struct a96t3x6_data *data, u8 enable,
 	unsigned int time_ms)
 {
-	GRIP_INFO("%s\n", __func__, enable ? "enabled": "disabled");
-	
 	if (enable == 1) {
 		data->firmware_count = 0;
 		schedule_delayed_work(&data->firmware_work,
@@ -3353,11 +3349,8 @@ static int a96t3x6_fw_check(struct a96t3x6_data *data)
 
 	ret = a96t3x6_load_fw_kernel(data);
 #ifdef CONFIG_SENSORS_FW_VENDOR
-	if (ret) {
-		GRIP_ERR("fw was not loaded yet from ueventd\n",
-			data->md_ver, data->md_ver_bin);
+	if (ret)
 		return ret;
-	}
 #elif defined(CONFIG_SEC_SENSORS_ENG_DEBUG)
 	if (ret) {
 		panic("grip fw doesn't exist\n");

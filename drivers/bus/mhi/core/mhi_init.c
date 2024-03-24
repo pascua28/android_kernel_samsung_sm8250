@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved. */
+/* Copyright (c) 2018-2021, The Linux Foundation. All rights reserved. */
 
 #include <linux/debugfs.h>
 #include <linux/device.h>
@@ -89,9 +89,12 @@ struct mhi_controller *find_mhi_controller_by_name(const char *name)
 
 const char *to_mhi_pm_state_str(enum MHI_PM_STATE state)
 {
-	int index = find_last_bit((unsigned long *)&state, 32);
+	int index;
 
-	if (index >= ARRAY_SIZE(mhi_pm_state_str))
+	if (state)
+		index = __fls(state);
+
+	if (!state || index >= ARRAY_SIZE(mhi_pm_state_str))
 		return "Invalid State";
 
 	return mhi_pm_state_str[index];
@@ -102,7 +105,7 @@ void mhi_time_async_cb(struct mhi_device *mhi_dev, u32 sequence,
 {
 	struct mhi_controller *mhi_cntrl = mhi_dev->mhi_cntrl;
 
-	MHI_LOG("Time response: seq:%llx local: %llu remote: %llu (ticks)\n",
+	MHI_LOG("Time response: seq:%x local: %llu remote: %llu (ticks)\n",
 		sequence, local_time, remote_time);
 }
 
@@ -111,7 +114,7 @@ void mhi_time_us_async_cb(struct mhi_device *mhi_dev, u32 sequence,
 {
 	struct mhi_controller *mhi_cntrl = mhi_dev->mhi_cntrl;
 
-	MHI_LOG("Time response: seq:%llx local: %llu remote: %llu (us)\n",
+	MHI_LOG("Time response: seq:%x local: %llu remote: %llu (us)\n",
 		sequence, LOCAL_TICKS_TO_US(local_time),
 		REMOTE_TICKS_TO_US(remote_time));
 }
@@ -173,13 +176,13 @@ static ssize_t time_async_show(struct device *dev,
 
 	ret = mhi_get_remote_time(mhi_dev, seq, &mhi_time_async_cb);
 	if (ret) {
-		MHI_ERR("Failed to request time, seq:%llx, ret:%d\n", seq, ret);
+		MHI_ERR("Failed to request time, seq:%x, ret:%d\n", seq, ret);
 		return scnprintf(buf, PAGE_SIZE,
 				 "Request failed or feature unsupported\n");
 	}
 
 	return scnprintf(buf, PAGE_SIZE,
-			 "Requested time asynchronously with seq:%llx\n", seq);
+			 "Requested time asynchronously with seq:%x\n", seq);
 }
 static DEVICE_ATTR_RO(time_async);
 
@@ -197,13 +200,13 @@ static ssize_t time_us_async_show(struct device *dev,
 
 	ret = mhi_get_remote_time(mhi_dev, seq, &mhi_time_us_async_cb);
 	if (ret) {
-		MHI_ERR("Failed to request time, seq:%llx, ret:%d\n", seq, ret);
+		MHI_ERR("Failed to request time, seq:%x, ret:%d\n", seq, ret);
 		return scnprintf(buf, PAGE_SIZE,
 				 "Request failed or feature unsupported\n");
 	}
 
 	return scnprintf(buf, PAGE_SIZE,
-			 "Requested time asynchronously with seq:%llx\n", seq);
+			 "Requested time asynchronously with seq:%x\n", seq);
 }
 static DEVICE_ATTR_RO(time_us_async);
 
@@ -328,10 +331,19 @@ static const struct attribute_group mhi_sysfs_group = {
 
 void mhi_create_sysfs(struct mhi_controller *mhi_cntrl)
 {
-	sysfs_create_group(&mhi_cntrl->mhi_dev->dev.kobj, &mhi_sysfs_group);
-	if (mhi_cntrl->mhi_tsync)
-		sysfs_create_group(&mhi_cntrl->mhi_dev->dev.kobj,
+	int ret;
+
+	ret = sysfs_create_group(&mhi_cntrl->mhi_dev->dev.kobj,
+			&mhi_sysfs_group);
+	if (ret)
+		MHI_CNTRL_LOG("Failed to create mhi_sysfs_group");
+
+	if (mhi_cntrl->mhi_tsync) {
+		ret = sysfs_create_group(&mhi_cntrl->mhi_dev->dev.kobj,
 				   &mhi_tsync_group);
+		if (ret)
+			MHI_CNTRL_LOG("Failed to create mhi_tsync_group");
+	}
 }
 
 void mhi_destroy_sysfs(struct mhi_controller *mhi_cntrl)
@@ -1054,7 +1066,16 @@ void mhi_deinit_chan_ctxt(struct mhi_controller *mhi_cntrl,
 	vfree(buf_ring->base);
 
 	buf_ring->base = tre_ring->base = NULL;
+	tre_ring->ctxt_wp = NULL;
 	chan_ctxt->rbase = 0;
+	chan_ctxt->rlen = 0;
+	chan_ctxt->rp = chan_ctxt->wp = chan_ctxt->rbase;
+	tre_ring->rp = tre_ring->wp = tre_ring->base;
+	buf_ring->rp = buf_ring->wp = buf_ring->base;
+
+	/* Update to all cores */
+	smp_wmb();
+
 }
 
 int mhi_init_chan_ctxt(struct mhi_controller *mhi_cntrl,
@@ -1779,6 +1800,13 @@ int mhi_prepare_for_power_up(struct mhi_controller *mhi_cntrl)
 					   &bhie_off);
 			if (ret) {
 				MHI_CNTRL_ERR("Error getting bhie offset\n");
+				goto bhie_error;
+			}
+
+			if (bhie_off >= mhi_cntrl->len) {
+				MHI_ERR("Invalid BHIE=0x%x  len=0x%x\n",
+					bhie_off, mhi_cntrl->len);
+				ret = -EINVAL;
 				goto bhie_error;
 			}
 

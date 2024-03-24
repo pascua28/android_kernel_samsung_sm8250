@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2019, 2021, The Linux Foundation. All rights reserved.
  */
 
 #include <drm/msm_drm_pp.h>
@@ -670,7 +670,6 @@ void sde_setup_dspp_pcc_v1_7(struct sde_hw_dspp *ctx, void *cfg)
 {
 	struct sde_hw_cp_cfg *hw_cfg = cfg;
 	struct drm_msm_pcc *pcc;
-	void  __iomem *base;
 
 	if (!hw_cfg  || (hw_cfg->len != sizeof(*pcc)  && hw_cfg->payload)) {
 		DRM_ERROR(
@@ -679,7 +678,6 @@ void sde_setup_dspp_pcc_v1_7(struct sde_hw_dspp *ctx, void *cfg)
 			   ((hw_cfg) ? hw_cfg->len : 0), sizeof(*pcc));
 		return;
 	}
-	base = ctx->hw.base_off + ctx->cap->base;
 
 	/* Turn off feature */
 	if (!hw_cfg->payload) {
@@ -951,17 +949,17 @@ void sde_read_dspp_hist_v1_7(struct sde_hw_dspp *ctx, void *cfg)
 
 void sde_lock_dspp_hist_v1_7(struct sde_hw_dspp *ctx, void *cfg)
 {
-	u32 offset_ctl;
+	u32 offset_ctl, val;
 
-	if (!ctx) {
-		DRM_ERROR("invalid parameters ctx %pK", ctx);
-		return;
-	}
+	if (!ctx || !cfg) {
+		DRM_ERROR("invalid parameters ctx %pK cfg %pK", ctx, cfg);
+ 		return;
+ 	}
 
 	offset_ctl = ctx->cap->sblk->hist.base + PA_HIST_CTRL_DSPP_OFF;
 
-	/* lock hist buffer */
-	SDE_REG_WRITE(&ctx->hw, offset_ctl, 1);
+	val = (*(u32 *)cfg) & 0x1;
+	SDE_REG_WRITE(&ctx->hw, offset_ctl, val);
 }
 
 void sde_setup_dspp_dither_v1_7(struct sde_hw_dspp *ctx, void *cfg)

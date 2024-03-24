@@ -145,7 +145,7 @@ enum icnss_driver_state {
 	ICNSS_DRIVER_PROBED,
 	ICNSS_FW_TEST_MODE,
 	ICNSS_PM_SUSPEND,
-	ICNSS_PM_SUSPEND_NOIRQ,
+	ICNSS_PM_SUSPEND_LATE,
 	ICNSS_SSR_REGISTERED,
 	ICNSS_PDR_REGISTERED,
 	ICNSS_PD_RESTART,
@@ -175,6 +175,7 @@ struct icnss_vreg_info {
 	u32 load_ua;
 	unsigned long settle_delay;
 	bool required;
+	bool is_supported;
 };
 
 struct icnss_clk_info {
@@ -213,10 +214,10 @@ struct icnss_stats {
 	uint32_t pm_suspend_err;
 	uint32_t pm_resume;
 	uint32_t pm_resume_err;
-	uint32_t pm_suspend_noirq;
-	uint32_t pm_suspend_noirq_err;
-	uint32_t pm_resume_noirq;
-	uint32_t pm_resume_noirq_err;
+	uint32_t pm_suspend_late;
+	uint32_t pm_suspend_late_err;
+	uint32_t pm_resume_early;
+	uint32_t pm_resume_early_err;
 	uint32_t pm_stay_awake;
 	uint32_t pm_relax;
 
@@ -385,6 +386,9 @@ struct icnss_priv {
 	int last_updated_voltage;
 	struct work_struct soc_update_work;
 	struct workqueue_struct *soc_update_wq;
+	bool is_chain1_supported;
+	bool chain_reg_info_updated;
+	unsigned long device_config;
 
 	struct kobject *wifi_kobj;
 };

@@ -1402,7 +1402,7 @@ int ipa_get_flt_rt_stats(struct ipa_ioc_flt_rt_query *query)
 	}
 
 	if (query->stats_size > sizeof(struct ipa_flt_rt_stats)) {
-		IPAERR("stats_size %d > ipa_flt_rt_stats %d\n",
+		IPAERR("stats_size %d > ipa_flt_rt_stats %lu\n",
 			query->stats_size, sizeof(struct ipa_flt_rt_stats));
 		return -EINVAL;
 	}
@@ -2248,7 +2248,7 @@ static ssize_t ipa_debugfs_enable_disable_drop_stats(struct file *file,
 	ssize_t ret;
 
 	mutex_lock(&ipa3_ctx->lock);
-	if (sizeof(dbg_buff) < count + 1) {
+	if (count >= sizeof(dbg_buff)) {
 		ret = -EFAULT;
 		goto bail;
 	}

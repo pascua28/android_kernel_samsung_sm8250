@@ -1064,7 +1064,7 @@ static void _sde_kms_drm_check_dpms(struct drm_atomic_state *old_state,
 			old_mode = DRM_PANEL_BLANK_POWERDOWN;
 		}
 
-		if ((old_mode != new_mode) || (old_fps != new_fps)) {
+		if (old_mode != new_mode) {
 			struct drm_panel_notifier notifier_data;
 
 			SDE_EVT32(old_mode, new_mode, old_fps, new_fps,
@@ -1298,7 +1298,7 @@ static void sde_kms_complete_commit(struct msm_kms *kms,
 		return;
 	priv = sde_kms->dev->dev_private;
 
-	if (sde_kms_power_resource_is_enabled(sde_kms->dev) < 0) {
+	if (!sde_kms_power_resource_is_enabled(sde_kms->dev)) {
 		SDE_ERROR("power resource is not enabled\n");
 		return;
 	}
@@ -2173,55 +2173,19 @@ static void sde_kms_destroy(struct msm_kms *kms)
 	kfree(sde_kms);
 }
 
-static void _sde_kms_plane_force_remove(struct drm_plane *plane,
-			struct drm_atomic_state *state)
-{
-	struct drm_plane_state *plane_state;
-	int ret = 0;
-
-	plane_state = drm_atomic_get_plane_state(state, plane);
-	if (IS_ERR(plane_state)) {
-		ret = PTR_ERR(plane_state);
-		SDE_ERROR("error %d getting plane %d state\n",
-				ret, plane->base.id);
-		return;
-	}
-
-	plane->old_fb = plane->fb;
-
-	SDE_DEBUG("disabling plane %d\n", plane->base.id);
-
-	ret = __drm_atomic_helper_disable_plane(plane, plane_state);
-	if (ret != 0)
-		SDE_ERROR("error %d disabling plane %d\n", ret,
-				plane->base.id);
-}
-
 static int _sde_kms_remove_fbs(struct sde_kms *sde_kms, struct drm_file *file,
 		struct drm_atomic_state *state)
 {
-	struct drm_device *dev = sde_kms->dev;
 	struct drm_framebuffer *fb, *tfb;
 	struct list_head fbs;
-	struct drm_plane *plane;
 	int ret = 0;
-	u32 plane_mask = 0;
 
 	INIT_LIST_HEAD(&fbs);
 
 	list_for_each_entry_safe(fb, tfb, &file->fbs, filp_head) {
-		if (drm_framebuffer_read_refcount(fb) > 1) {
+		if (drm_framebuffer_read_refcount(fb) > 1)
 			list_move_tail(&fb->filp_head, &fbs);
-
-			drm_for_each_plane(plane, dev) {
-				if (plane->fb == fb) {
-					plane_mask |=
-						1 << drm_plane_index(plane);
-					 _sde_kms_plane_force_remove(
-								plane, state);
-				}
-			}
-		} else {
+		else {
 			list_del_init(&fb->filp_head);
 			drm_framebuffer_put(fb);
 		}
@@ -3419,72 +3383,6 @@ static void _sde_kms_set_lutdma_vbif_remap(struct sde_kms *sde_kms)
 	sde_vbif_set_qos_remap(sde_kms, &qos_params);
 }
 
-void sde_kms_update_pm_qos_irq_request(struct sde_kms *sde_kms,
-			 bool enable, bool skip_lock)
-{
-	struct msm_drm_private *priv;
-
-	priv = sde_kms->dev->dev_private;
-
-	if (!skip_lock)
-		mutex_lock(&priv->phandle.phandle_lock);
-
-	if (enable) {
-		struct pm_qos_request *req;
-		u32 cpu_irq_latency;
-
-		req = &sde_kms->pm_qos_irq_req;
-		req->type = PM_QOS_REQ_AFFINE_CORES;
-		req->cpus_affine = sde_kms->irq_cpu_mask;
-		cpu_irq_latency = sde_kms->catalog->perf.cpu_irq_latency;
-
-		if (pm_qos_request_active(req))
-			pm_qos_update_request(req, cpu_irq_latency);
-		else if (!cpumask_empty(&req->cpus_affine)) {
-			/** If request is not active yet and mask is not empty
-			 *  then it needs to be added initially
-			 */
-			pm_qos_add_request(req, PM_QOS_CPU_DMA_LATENCY,
-					cpu_irq_latency);
-		}
-	} else if (!enable && pm_qos_request_active(&sde_kms->pm_qos_irq_req)) {
-		pm_qos_update_request(&sde_kms->pm_qos_irq_req,
-				PM_QOS_DEFAULT_VALUE);
-	}
-
-	sde_kms->pm_qos_irq_req_en = enable;
-
-	if (!skip_lock)
-		mutex_unlock(&priv->phandle.phandle_lock);
-}
-
-static void sde_kms_irq_affinity_notify(
-		struct irq_affinity_notify *affinity_notify,
-		const cpumask_t *mask)
-{
-	struct msm_drm_private *priv;
-	struct sde_kms *sde_kms = container_of(affinity_notify,
-					struct sde_kms, affinity_notify);
-
-	if (!sde_kms || !sde_kms->dev || !sde_kms->dev->dev_private)
-		return;
-
-	priv = sde_kms->dev->dev_private;
-
-	mutex_lock(&priv->phandle.phandle_lock);
-
-	// save irq cpu mask
-	sde_kms->irq_cpu_mask = *mask;
-
-	// request vote with updated irq cpu mask
-	if (sde_kms->pm_qos_irq_req_en)
-		sde_kms_update_pm_qos_irq_request(sde_kms, true, true);
-
-	mutex_unlock(&priv->phandle.phandle_lock);
-}
-
-static void sde_kms_irq_affinity_release(struct kref *ref) {}
-
 static void sde_kms_handle_power_event(u32 event_type, void *usr)
 {
 	struct sde_kms *sde_kms = usr;
@@ -3503,9 +3401,7 @@ static void sde_kms_handle_power_event(u32 event_type, void *usr)
 		sde_kms_init_shared_hw(sde_kms);
 		_sde_kms_set_lutdma_vbif_remap(sde_kms);
 		sde_kms->first_kickoff = true;
-		sde_kms_update_pm_qos_irq_request(sde_kms, true, true);
 	} else if (event_type == SDE_POWER_EVENT_PRE_DISABLE) {
-		sde_kms_update_pm_qos_irq_request(sde_kms, false, true);
 		sde_irq_update(msm_kms, false);
 		sde_kms->first_kickoff = false;
 	}
@@ -3954,7 +3850,7 @@ static int sde_kms_hw_init(struct msm_kms *kms)
 	struct drm_device *dev;
 	struct msm_drm_private *priv;
 	struct platform_device *platformdev;
-	int i, irq_num, rc = -EINVAL;
+	int i, rc = -EINVAL;
 
 	if (!kms) {
 		SDE_ERROR("invalid kms\n");
@@ -4030,15 +3926,6 @@ static int sde_kms_hw_init(struct msm_kms *kms)
 		pm_runtime_put_sync(sde_kms->dev->dev);
 	}
 
-	sde_kms->affinity_notify.notify = sde_kms_irq_affinity_notify;
-	sde_kms->affinity_notify.release = sde_kms_irq_affinity_release;
-
-	irq_num = platform_get_irq(to_platform_device(sde_kms->dev->dev), 0);
-	SDE_DEBUG("Registering for notification of irq_num: %d\n", irq_num);
-	irq_set_affinity_notifier(irq_num, &sde_kms->affinity_notify);
-
-	reg_log_dump(__func__, __LINE__);
-
 	return 0;
 
 hw_init_err:
@@ -4051,15 +3938,12 @@ end:
 
 struct msm_kms *sde_kms_init(struct drm_device *dev)
 {
-	struct msm_drm_private *priv;
 	struct sde_kms *sde_kms;
 
 	if (!dev || !dev->dev_private) {
 		SDE_ERROR("drm device node invalid\n");
 		return ERR_PTR(-EINVAL);
 	}
-
-	priv = dev->dev_private;
 
 	sde_kms = kzalloc(sizeof(*sde_kms), GFP_KERNEL);
 	if (!sde_kms) {

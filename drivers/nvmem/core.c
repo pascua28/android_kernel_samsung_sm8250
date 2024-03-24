@@ -69,7 +69,7 @@ static ssize_t bin_attr_nvmem_cell_read(struct file *filp, struct kobject *kobj,
 				    char *buf, loff_t pos, size_t count)
 {
 	struct nvmem_cell *cell;
-	size_t len;
+	size_t len = 0;
 	u8 *data;
 
 	cell = attr->private;
@@ -152,6 +152,7 @@ static void nvmem_cell_add(struct nvmem_cell *cell)
 	nvmem_cell_attr->private = cell;
 	nvmem_cell_attr->size = cell->bytes;
 	nvmem_cell_attr->read = bin_attr_nvmem_cell_read;
+	sysfs_attr_init(&nvmem_cell_attr->attr);
 	rval = device_create_bin_file(&cell->nvmem->dev, nvmem_cell_attr);
 	if (rval)
 		dev_err(&cell->nvmem->dev,

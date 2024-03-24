@@ -21,6 +21,10 @@ enum icnss_uevent {
 	ICNSS_UEVENT_HANG_DATA,
 };
 
+enum icnss_device_config {
+	ICNSS_IPA_DISABLED,
+};
+
 struct icnss_uevent_hang_data {
 	void *hang_event_data;
 	uint16_t hang_event_data_len;
@@ -48,6 +52,8 @@ struct icnss_driver_ops {
 	int (*pm_resume)(struct device *dev);
 	int (*suspend_noirq)(struct device *dev);
 	int (*resume_noirq)(struct device *dev);
+	int (*suspend_late)(struct device *dev);
+	int (*resume_early)(struct device *dev);
 	int (*uevent)(struct device *dev, struct icnss_uevent_data *uevent);
 	int (*idle_shutdown)(struct device *dev);
 	int (*idle_restart)(struct device *dev);
@@ -155,4 +161,5 @@ extern int icnss_idle_shutdown(struct device *dev);
 
 extern int cnss_sysfs_get_pm_info(void);
 extern void cnss_sysfs_update_driver_status(int32_t new_status, void *version, void *softap);
+extern unsigned long icnss_get_device_config(void);
 #endif /* _ICNSS_WLAN_H_ */
