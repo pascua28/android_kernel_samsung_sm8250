@@ -158,9 +158,8 @@ static inline bool task_is_booster(struct task_struct *tsk)
 	char comm[sizeof(tsk->comm)];
 
 	get_task_comm(comm, tsk);
-	return !strcmp(comm, "init") || !strcmp(comm, "HyPerThread") ||
-	       !strcmp(comm, "perf@2.2-servic") ||
-	       !strcmp(comm, "init.qcom.post_");
+	return strstr(comm, "init") || strstr(comm, "HyPerThread") ||
+	       strstr(comm, "perf");
 }
 
 #endif /* _LINUX_BINFMTS_H */
