@@ -1839,8 +1839,8 @@ static u8 fts_event_handler_type_b(struct fts_ts_info *info)
 			if (p_event_status->stype == FTS_EVENT_STATUSTYPE_VENDORINFO) {
 				if (info->board->support_ear_detect) {
 					if (p_event_status->status_id == 0x6A) {
-						if (info->fts_power_state == FTS_POWER_STATE_LOWPOWER || info->finger[TouchID].y < 700 && info->finger[TouchID].x > 900
-						    && info->finger[TouchID].x < 3000) {
+						if (info->fts_power_state == FTS_POWER_STATE_LOWPOWER || (info->finger[TouchID].y < 700 && info->finger[TouchID].x > 900
+						    && info->finger[TouchID].x < 3000)) {
 							// Report actual range when either the area around the sensor is touched or if panel is in LPM state
 							p_event_status->status_data_1 = p_event_status->status_data_1 == 5 || !p_event_status->status_data_1;
 							info->hover_event = p_event_status->status_data_1;
