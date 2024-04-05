@@ -9096,6 +9096,8 @@ static void hdd_clear_rps_cpu_mask(struct hdd_context *hdd_ctx)
  *
  * Return: none
  */
+#define CONFIG_LITTLE_CPU_MASK 15
+#define CONFIG_BIG_CPU_MASK 112
 static inline int hdd_pm_qos_update_cpu_mask(bool high_throughput)
 {
 	if (high_throughput) {
