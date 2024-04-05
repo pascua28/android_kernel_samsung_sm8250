@@ -729,6 +729,13 @@ static int sugov_init(struct cpufreq_policy *policy)
 	struct sugov_tunables *tunables;
 	int ret = 0;
 
+	static const unsigned long lp_cpu_bits = 15;
+	const struct cpumask *const cpu_lp_mask = to_cpumask(&lp_cpu_bits);
+	static const unsigned long perf_cpu_bits = 112;
+	const struct cpumask *const cpu_perf_mask = to_cpumask(&perf_cpu_bits);
+	static const unsigned long prime_cpu_bits = 128;
+	const struct cpumask *const cpu_prime_mask = to_cpumask(&prime_cpu_bits);
+
 	/* State should be equivalent to EXIT */
 	if (policy->governor_data)
 		return -EBUSY;
