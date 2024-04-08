@@ -501,7 +501,6 @@ else
 DFS_OBJS +=	$(WLAN_COMMON_ROOT)/target_if/dfs/src/target_if_dfs_partial_offload.o \
 		$(DFS_CORE_SRC_DIR)/filtering/dfs_fcc_bin5.o \
 		$(DFS_CORE_SRC_DIR)/filtering/dfs_bindetects.o \
-		$(DFS_CORE_SRC_DIR)/filtering/dfs_debug.o \
 		$(DFS_CORE_SRC_DIR)/filtering/dfs_init.o \
 		$(DFS_CORE_SRC_DIR)/filtering/dfs_misc.o \
 		$(DFS_CORE_SRC_DIR)/filtering/dfs_phyerr_tlv.o \
@@ -511,6 +510,9 @@ DFS_OBJS +=	$(WLAN_COMMON_ROOT)/target_if/dfs/src/target_if_dfs_partial_offload.
 		$(DFS_CORE_SRC_DIR)/filtering/dfs_radar.o \
 		$(DFS_CORE_SRC_DIR)/filtering/dfs_partial_offload_radar.o \
 		$(DFS_CORE_SRC_DIR)/misc/dfs_filter_init.o
+ifdef DFS_DEBUG
+DFS_OBJS +=	$(DFS_CORE_SRC_DIR)/filtering/dfs_debug.o
+endif
 endif
 
 ############ SME ############
@@ -576,8 +578,10 @@ WLAN_LOGGING_INC_DIR :=	$(WLAN_LOGGING_DIR)/inc
 WLAN_LOGGING_SRC_DIR :=	$(WLAN_LOGGING_DIR)/src
 
 WLAN_LOGGING_INC     := -I$(WLAN_ROOT)/$(WLAN_LOGGING_INC_DIR)
+ifeq ($(BUILD_DEBUG_VERSION), 1)
 WLAN_LOGGING_OBJS    := $(WLAN_LOGGING_SRC_DIR)/wlan_logging_sock_svc.o \
 		$(WLAN_LOGGING_SRC_DIR)/wlan_roam_debug.o
+endif
 
 ############ SYS ############
 SYS_DIR :=	core/mac/src/sys
@@ -2187,7 +2191,9 @@ OBJS +=		$(TDLS_OBJS)
 OBJS +=		$(PMO_OBJS)
 OBJS +=		$(P2P_OBJS)
 OBJS +=		$(POLICY_MGR_OBJS)
+ifeq ($(BUILD_DEBUG_VERSION), y)
 OBJS +=		$(WLAN_LOGGING_OBJS)
+endif
 OBJS +=		$(NLINK_OBJS)
 OBJS +=		$(PTT_OBJS)
 OBJS +=		$(UMAC_SER_OBJS)
@@ -2399,7 +2405,6 @@ cppflags-$(CONFIG_WLAN_TX_FLOW_CONTROL_LEGACY) += -DQCA_LL_LEGACY_TX_FLOW_CONTRO
 cppflags-$(CONFIG_WLAN_PDEV_TX_FLOW_CONTROL) += -DQCA_LL_PDEV_TX_FLOW_CONTROL
 
 ifeq ($(BUILD_DEBUG_VERSION), y)
-cppflags-y +=	-DWLAN_DEBUG
 ifeq ($(CONFIG_TRACE_RECORD_FEATURE), y)
 cppflags-y +=	-DTRACE_RECORD \
 		-DLIM_TRACE_RECORD \
@@ -2982,7 +2987,7 @@ cppflags-$(CONFIG_WLAN_HANG_EVENT) += -DHIF_BUS_LOG_INFO
 cppflags-$(CONFIG_WLAN_HANG_EVENT) += -DDP_SUPPORT_RECOVERY_NOTIFY
 #endof dummy flags
 
-ccflags-$(CONFIG_ENABLE_SIZE_OPTIMIZE) += -Os -g0
+ccflags-$(CONFIG_ENABLE_SIZE_OPTIMIZE) += -Os
 
 # DFS component
 cppflags-$(CONFIG_WLAN_DFS_STATIC_MEM_ALLOC) += -DWLAN_DFS_STATIC_MEM_ALLOC
