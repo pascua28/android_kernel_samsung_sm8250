@@ -24,7 +24,6 @@
 #include "kona-sec-pm-common.dtsi"
 #include "kona-sec-pm8150b-common.dtsi"
 #include "kona-sec-sensor-common.dtsi"
-#include "kona-sec-booster-common.dtsi"
 #include "kona-sec-argos-common.dtsi"
 
 &soc {
