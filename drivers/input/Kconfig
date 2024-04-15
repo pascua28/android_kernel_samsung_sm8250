@@ -237,15 +237,6 @@ config TOUCHSCREEN_DUMP_MODE
 	  
 	  If unsure, say N.
 
-config SEC_INPUT_BOOSTER
-	bool "SEC INPUT BOOSTER"
-	depends on INPUT_EVDEV
-	default y
-	help
-	  Say Y here if you need to enable Input Booster.
-
-	  It's triggered in evdev module.
-
 comment "Input Device Drivers"
 
 source "drivers/input/keyboard/Kconfig"

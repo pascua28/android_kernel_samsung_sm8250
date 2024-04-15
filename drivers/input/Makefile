@@ -21,8 +21,6 @@ obj-$(CONFIG_INPUT_LEDS)	+= input-leds.o
 obj-$(CONFIG_INPUT_MOUSEDEV)	+= mousedev.o
 obj-$(CONFIG_INPUT_JOYDEV)	+= joydev.o
 obj-$(CONFIG_INPUT_EVDEV)	+= evdev.o
-obj-$(CONFIG_SEC_INPUT_BOOSTER)	+= input_booster.o input_booster_qc.o
-obj-$(CONFIG_ARCH_)	+= input_booster_api_qc.o
 obj-$(CONFIG_INPUT_EVBUG)	+= evbug.o
 
 obj-$(CONFIG_INPUT_MOUSE)	+= mouse/
