@@ -4,15 +4,15 @@
 ## AnyKernel setup
 # begin properties
 properties() { '
-kernel.string=Kernel for S20 FE by pascua28 @ xda-developers
+kernel.string=Kernel for S20 FE (Snapdragon) by pascua28 @ xda-developers
 do.devicecheck=1
 do.modules=0
 do.systemless=1
 do.cleanup=1
 do.cleanuponabort=0
 device.name1=r8q
-device.name2=
-device.name3=
+device.name2=r8qxx
+device.name3=r8qxxx
 device.name4=
 device.name5=
 supported.versions=
@@ -35,9 +35,18 @@ ramdisk_compression=auto;
 set_perm_recursive 0 0 755 644 $ramdisk/*;
 set_perm_recursive 0 0 750 750 $ramdisk/init* $ramdisk/sbin;
 
-
 ## AnyKernel boot install
 dump_boot;
+
+case "$ZIPFILE" in
+   *-perf*)
+    ui_print " • Flashing performance device tree blob • "
+    mv $home/kona-perf.dtb $home/dtb
+    ;;
+   *)
+    mv $home/kona.dtb $home/dtb
+    ;;
+esac
 
 # begin ramdisk changes
 
