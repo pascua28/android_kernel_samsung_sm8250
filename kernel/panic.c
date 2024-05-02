@@ -146,8 +146,11 @@ void panic(const char *fmt, ...)
 	bool _crash_kexec_post_notifiers = crash_kexec_post_notifiers;
 
 	sec_debug_store_extc_idx(false);
+
+#ifdef CONFIG_QCOM_WATCHDOG_V2
 	/*To prevent watchdog reset during panic handling. */
 	emerg_pet_watchdog();
+#endif
 
 	/*
 	 * Disable local interrupts. This will prevent panic_smp_self_stop
