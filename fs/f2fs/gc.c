@@ -318,6 +318,7 @@ static int panel_state_notifier(struct notifier_block *nb,
 		goto out;
 
 	switch (panel_state) {
+	case PANEL_LPM:
 	case PANEL_OFF:
 		if (!screen_on)
 			goto out;
