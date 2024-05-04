@@ -16,8 +16,8 @@
 #include <uapi/linux/sched/types.h>
 #include <linux/sched/signal.h>
 #include <uapi/linux/sched/types.h>
-#include <linux/msm_drm_notify.h>
 #include <linux/power_supply.h>
+#include "../../techpack/display/msm/samsung/ss_panel_notify.h"
 
 #include "f2fs.h"
 #include "node.h"
@@ -303,32 +303,34 @@ static void rapid_gc_fb_work(struct work_struct *work)
 	}
 }
 
-static int msm_drm_notifier_callback(struct notifier_block *self,
-				unsigned long event, void *data)
+static int panel_state_notifier(struct notifier_block *nb,
+	unsigned long val, void *data)
 {
-	struct msm_drm_notifier *evdata = data;
-	int *blank;
+	struct panel_state_data *evdata = (struct panel_state_data *)data;
+	unsigned int panel_state;
 
-	if (event != MSM_DRM_EVENT_BLANK)
+	if (val != PANEL_EVENT_STATE_CHANGED)
 		goto out;
 
-	if (!evdata || !evdata->data || evdata->id != MSM_DRM_PRIMARY_DISPLAY)
+	if (evdata)
+		panel_state = evdata->state;
+	else
 		goto out;
 
-	blank = evdata->data;
-	switch (*blank) {
-	case MSM_DRM_BLANK_POWERDOWN:
+	switch (panel_state) {
+	case PANEL_OFF:
 		if (!screen_on)
 			goto out;
 		screen_on = false;
 		queue_work(system_power_efficient_wq, &rapid_gc_fb_worker);
-		break;
-	case MSM_DRM_BLANK_UNBLANK:
+		goto out;
+
+	case PANEL_ON:
 		if (screen_on)
 			goto out;
 		screen_on = true;
 		queue_work(system_power_efficient_wq, &rapid_gc_fb_worker);
-		break;
+		goto out;
 	}
 
 out:
@@ -336,19 +338,19 @@ out:
 }
 
 static struct notifier_block fb_notifier_block = {
-	.notifier_call = msm_drm_notifier_callback,
+	.notifier_call = panel_state_notifier,
 };
 
 void __init f2fs_init_rapid_gc(void)
 {
 	INIT_WORK(&rapid_gc_fb_worker, rapid_gc_fb_work);
 	gc_wakelock = wakeup_source_register(NULL, "f2fs_rapid_gc_wakelock");
-	msm_drm_register_client(&fb_notifier_block);
+	ss_panel_notifier_register(&fb_notifier_block);
 }
 
 void __exit f2fs_destroy_rapid_gc(void)
 {
-	msm_drm_unregister_client(&fb_notifier_block);
+	ss_panel_notifier_unregister(&fb_notifier_block);
 	wakeup_source_unregister(gc_wakelock);
 }
 
