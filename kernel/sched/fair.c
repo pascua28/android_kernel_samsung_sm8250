@@ -5680,8 +5680,6 @@ enqueue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 	struct cfs_rq *cfs_rq;
 	struct sched_entity *se = &p->se;
         int idle_h_nr_running = task_has_idle_policy(p);
-	bool prefer_idle = sched_feat(EAS_PREFER_IDLE) ?
-				(schedtune_prefer_idle(p) > 0) : 0;
 
 #ifdef CONFIG_PERF_MGR
 	unsigned long next_fps_boosted_util;
@@ -5743,13 +5741,6 @@ enqueue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 		}
 	}
 #endif /* fps_util */
-	/*
-	 * If in_iowait is set, the code below may not trigger any cpufreq
-	 * utilization updates, so do it here explicitly with the IOWAIT flag
-	 * passed.
-	 */
-	if (p->in_iowait && prefer_idle)
-		cpufreq_update_util(rq, SCHED_CPUFREQ_IOWAIT);
 
 	for_each_sched_entity(se) {
 		if (se->on_rq)
@@ -5806,7 +5797,7 @@ enqueue_throttle:
 		 * overutilized. Hopefully the cpu util will be back to
 		 * normal before next overutilized check.
 		 */
-		if ((flags & ENQUEUE_WAKEUP) && !(prefer_idle && rq->nr_running == 1))
+		if (flags & ENQUEUE_WAKEUP)
 			update_overutilized_status(rq);
 	}
 
