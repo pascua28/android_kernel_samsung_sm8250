@@ -438,7 +438,7 @@ int mhi_init_irq_setup(struct mhi_controller *mhi_cntrl)
 	/* for BHI INTVEC msi */
 	ret = request_threaded_irq(mhi_cntrl->irq[0], mhi_intvec_handlr,
 				   mhi_intvec_threaded_handlr,
-				   IRQF_ONESHOT | IRQF_NO_SUSPEND,
+				   IRQF_ONESHOT | IRQF_NO_SUSPEND | IRQF_NOBALANCING,
 				   "mhi", mhi_cntrl);
 	if (ret)
 		return ret;
