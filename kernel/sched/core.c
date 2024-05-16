@@ -9079,13 +9079,13 @@ const u32 sched_prio_to_wmult[40] = {
 
 #undef CREATE_TRACE_POINTS
 
-#ifdef CONFIG_SCHED_WALT
 /*
  *@boost:should be 0,1,2.
  *@period:boost time based on ms units.
  */
 int set_task_boost(int boost, u64 period)
 {
+#ifdef CONFIG_SCHED_WALT
 	if (boost < TASK_BOOST_NONE || boost >= TASK_BOOST_END)
 		return -EINVAL;
 	if (boost) {
@@ -9097,10 +9097,12 @@ int set_task_boost(int boost, u64 period)
 		current->boost_expires = 0;
 		current->boost_period = 0;
 	}
+#endif
 	return 0;
 }
 EXPORT_SYMBOL_GPL(set_task_boost);
 
+#ifdef CONFIG_SCHED_WALT
 /*
  * sched_exit() - Set EXITING_TASK_MARKER in task's ravg.demand field
  *
