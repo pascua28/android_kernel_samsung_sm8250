@@ -82,6 +82,11 @@ extern int sched_updown_migrate_handler(struct ctl_table *table,
 extern unsigned int sysctl_sched_boost;
 extern unsigned int sysctl_sched_min_task_util_for_boost;
 extern unsigned int sysctl_sched_min_task_util_for_colocation;
+
+static unsigned int sysctl_sched_prefer_spread;
+static unsigned int sysctl_sched_upmigrate = 94;
+static unsigned int sysctl_sched_downmigrate = 84;
+static unsigned int sysctl_sched_ravg_window_nr_ticks;
 #endif
 
 #if defined(CONFIG_PREEMPTIRQ_EVENTS) || defined(CONFIG_PREEMPT_TRACER)
