@@ -35,7 +35,7 @@ static inline unsigned long map_util_freq(unsigned long util,
 	return freq * util / cap;
 }
 
-static inline unsigned long map_util_perf(unsigned long util)
+static inline __maybe_unused unsigned long map_util_perf(unsigned long util)
 {
 	return util + (util >> 2);
 }
