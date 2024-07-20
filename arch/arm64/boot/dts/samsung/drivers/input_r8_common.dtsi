@@ -14,7 +14,7 @@
 
 /delete-node/ &gpio_keys;
 &soc {
-	tsp_ldo_en {
+	tsp_ldo: tsp_ldo_en {
 		compatible = "regulator-fixed";
 		gpio = <&tlmm 92 0>;
 		regulator-name = "tsp_ldo_en";
@@ -128,5 +128,30 @@
 		zinitix,afe_base = <0x0018>;
 		zinitix,ss_touch_num = <1>;
 	};
+
+	tsp_stm: touchscreen@49 {
+				status = "ok";
+				compatible = "stm,fts_touch";
+				reg = <0x49>;
+				pinctrl-names = "on_state", "off_state";
+				pinctrl-0 = <&attn_irq>;
+				pinctrl-1 = <&attn_irq>;
+				avdd-supply = <&tsp_ldo>;
+				stm,irq_gpio = <&tlmm 15 0x2008>;
+				stm,max_coords = <0xfff 0xfff>;
+				stm,firmware_name = "tsp_stm/fts5cu56a_r8.bin";
+				stm,tclm_level = <2>;
+				stm,afe_base = <0x5>;
+				stm,bringup = <0>;
+				stm,support_fod;
+				stm,enable_settings_aot;
+				support_ear_detect;
+				support_mis_calibration_test;
+				support_dex_mode;
+				support_open_short_test;
+				support_sram_test;
+				stm,ss_touch_num = <1>;
+	};
+
 };
 
