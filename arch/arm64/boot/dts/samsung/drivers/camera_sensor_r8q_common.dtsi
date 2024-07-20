@@ -62,6 +62,7 @@
 		pinctrl-1 = <&flash_led_suspend>;
 		status = "ok";
 	};
+
 	leds_rt8547 {
 		reg = <0x74>;
 		compatible = "qcom,rt8547-fled";
@@ -71,6 +72,20 @@
 		torch_current = <175>; /* Max = 400mA */
 		factory_current = <350>; /* Max = 400mA */
 		pre_current = <175>; /* Max = 400mA */
+		status = "okay";
+	};
+
+	leds_ktd2692 {
+		reg = <0x74>;
+		compatible = "qcom,ktd2692";
+		flash_control = <&tlmm 126 0x1>;
+		flash_en = <&tlmm 117 0x1>;
+		max_current = <1600>;
+		flash_current = <1000>;
+		video_current = <175>;
+		factory_torch_current = <175>;
+		torch_table_enable = <0x1>;
+		torch_table = <0x1 0x2 0x2 0x3 0x3 0x4 0x4 0x4 0x5 0x5>;
 		status = "okay";
 	};
 };
