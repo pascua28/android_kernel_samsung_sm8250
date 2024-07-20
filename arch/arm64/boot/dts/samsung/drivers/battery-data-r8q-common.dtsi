@@ -137,6 +137,7 @@
 		battery,chg_temp_check_type = <1>;
 		battery,wpc_temp_check_type = <1>;
 		battery,dchg_temp_check_type = <1>;
+		battery,lrp_temp_check_type = <0>;
 
 		battery,thermal_source = <2>; /* SEC_BATTERY_THERMAL_SOURCE_ADC */
 		battery,usb_thermal_source = <2>; /* SEC_BATTERY_THERMAL_SOURCE_ADC */
@@ -254,10 +255,10 @@
 
 		battery,chg_high_temp = <450>;
 		battery,chg_high_temp_recovery = <430>;
-		battery,dchg_high_temp = <500>;
-		battery,dchg_high_temp_recovery = <440>;
-		battery,dchg_high_batt_temp = <400>;
-		battery,dchg_high_batt_temp_recovery = <380>;
+		battery,dchg_high_temp = <1000 1000 500 500>;
+		battery,dchg_high_temp_recovery = <1000 1000 440 440>;
+		battery,dchg_high_batt_temp = <1000 1000 400 400>;
+		battery,dchg_high_batt_temp_recovery = <1000 1000 380 380>;
 		battery,chg_input_limit_current = <1000>;
 		battery,chg_charging_limit_current = <1900>;
 		battery,dchg_input_limit_current = <1000>;
@@ -361,12 +362,14 @@
 		battery,siop_hv_wireless_charging_limit_current = <700>;
 		battery,siop_store_hv_wireless_input_limit_current = <450>;
 
+		battery,input_current_by_siop_20 = <500>;
+
 		battery,wireless_otg_input_current = <900>;
 
-		battery,ttf_hv_charge_current = <2870>;
-		battery,ttf_hv_wireless_charge_current = <1450>;
-		battery,ttf_wireless_charge_current = <835>;
-		battery,ttf_dc25_charge_current = <11200>;
+		battery,ttf_hv_charge_current = <2840>;
+		battery,ttf_hv_wireless_charge_current = <1460>;
+		battery,ttf_wireless_charge_current = <875>;
+		battery,ttf_dc25_charge_current = <4350>;
 
 		battery,rp_current_rp1 = <500>;
 		battery,rp_current_rp2 = <1500>;
@@ -464,7 +467,7 @@
 		fuelgauge,capacity_max = <1000>;
 		fuelgauge,capacity_max_margin = <300>;
 		fuelgauge,capacity_min = <0>;
-		fuelgauge,capacity_calculation_type = <28>;
+		fuelgauge,capacity_calculation_type = <92>;
 		fuelgauge,repeated_fuelalert;
 		fuelgauge,using_temp_compensation;
 		fuelgauge,low_temp_limit = <100>;
@@ -479,49 +482,28 @@
 		fuelgauge,fg_reset_wa_data = <0x0FEE 0x3200 0x03FB 0x003E 0x2534>; /* fullcapnom(=capacity), dPacc, dQacc,  rcomp0, tempco */
 		fuelgauge,discharge_temp_threshold = <600>;
 		fuelgauge,discharge_volt_threshold = <4200>;
-		fuelgauge,ttf_capacity = <3770>;
+		fuelgauge,lost_soc_trig_soc = <1000>;
+		fuelgauge,lost_soc_trig_d_soc = <20>;
+		fuelgauge,lost_soc_trig_scale = <2>;
+		fuelgauge,lost_soc_guarantee_soc = <30>;
+		fuelgauge,lost_soc_min_vol = <3200>;
+		fuelgauge,ttf_capacity = <3890>;
 		fuelgauge,cv_data = <
-			3879	658	3300
-			3782	670	3240
-			3441	684	3180
-			3644	699	3120
-			3654	713	3060
-			3610	728	3000
-			3595	743	2040
-			3646	755	1980
-			3657	770	1920
-			3564	784	1860
-			3636	799	1800
-			3438	813	1740
-			3080	826	1680
-			2980	838	1620
-			2690	849	1560
-			2480	860	1500
-			2235	869	1440
-			2166	878	1380
-			1972	886	1320
-			1825	894	1260
-			1742	901	1200
-			1612	907	1140
-			1616	914	1080
-			1464	919	1020
-			1260	924	960
-			1235	929	900
-			1114	934	840
-			1048	938	780
-			1028	943	720
-			922	947	660
-			702	950	600
-			688	952	540
-			648	955	480
-			617	957	420
-			613	960	360
-			562	967	300
-			566	972	240
-			514	978	180
-			483	989	120
-			458	995	60
-			464	1000	0
+				3228 864 1334
+				3067 872 1293
+				2896 881 1242
+				2695 892 1180
+				2492 902 1093
+				2263 910 1005
+				2103 920 908
+				1911 930 800
+				1722 942 671
+				1532 950 563
+				1338 960 485
+				1213 969 286
+				1073 980 107
+				932 990 85
+				571 1000 0
 		>;
 	};
 
@@ -645,7 +627,7 @@
 			vout = <5500>;
 			input_current_limit = <800>;
 			fast_charging_current = <3150>;
-			ttf_charge_current = <835>;
+			ttf_charge_current = <875>;
 			rx_power = <4500>;
 		};
 		current_group_1 {
@@ -653,7 +635,7 @@
 			vout = <10000>;
 			input_current_limit = <750>;
 			fast_charging_current = <3150>;
-			ttf_charge_current = <1450>;
+			ttf_charge_current = <1460>;
 			rx_power = <7500>;
 		};
 		current_group_2 {
@@ -661,7 +643,7 @@
 			vout = <11000>;
 			input_current_limit = <825>;
 			fast_charging_current = <3150>;
-			ttf_charge_current = <1900>;
+			ttf_charge_current = <1890>;
 			rx_power = <9075>;
 		};
 		current_group_3 {
@@ -669,7 +651,7 @@
 			vout = <11000>;
 			input_current_limit = <1000>;
 			fast_charging_current = <3150>;
-			ttf_charge_current = <2230>;
+			ttf_charge_current = <2200>;
 			rx_power = <11000>;
 		};
 	};

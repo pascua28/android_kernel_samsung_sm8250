@@ -14,7 +14,7 @@
 #include "kona-sec-r8q-pm-common.dtsi"
 #include "../drivers/audio_r8_common.dtsi"
 #include "../drivers/bluetooth_r8q_common.dtsi"
-#include "../drivers/kona-sec-r8q-mst-r00.dtsi"
+/* #include "../drivers/kona-sec-r8q-mst-r00.dtsi" */
 #include "../drivers/kona-sec-r8q-sensor-r00.dtsi"
 #include "../drivers/displayport_r8q_r00.dtsi"
 #include "../drivers/nfc_r8q_r00.dtsi"
@@ -85,6 +85,7 @@
 
 &wlan {
 	wlan-en-gpio = <&tlmm 90 0>;
+	qcom,bt-en-gpio = <&tlmm 76 0>;
 	vdd-wlan-dig-supply = <&pm8150_s6>;
 	pinctrl-0 = <&qca6390_wlan_en_active>;
 	pinctrl-1 = <&qca6390_wlan_en_sleep>;
@@ -93,6 +94,7 @@
 
 &pcie0 {
 	qcom,target-link-speed = <0x2>; /* limit to gen2 */
+	qcom,config-recovery;
 	esoc-name = "wlan";
 	oops-after-ready;
 };
