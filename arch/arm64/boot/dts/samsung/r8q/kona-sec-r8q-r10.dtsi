@@ -10,10 +10,11 @@
  * GNU General Public License for more details.
  */
 
-#include "kona-sec-r8q-r09.dtsi"
+#include "kona-sec-r8q-r07.dtsi"
 #include "kona-sec-r8q-pinctrl-r10.dtsi"
 
 &soc {
 
 };
 
+#include "../drivers/nfc_r8q_r09.dtsi"

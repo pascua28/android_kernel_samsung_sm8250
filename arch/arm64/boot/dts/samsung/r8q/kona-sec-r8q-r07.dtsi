@@ -12,8 +12,3 @@
 
 #include "kona-sec-r8q-r06.dtsi"
 #include "kona-sec-r8q-pinctrl-r07.dtsi"
-
-&soc {
-
-};
-
