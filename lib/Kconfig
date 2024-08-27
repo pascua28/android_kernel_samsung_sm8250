@@ -613,7 +613,7 @@ config STRING_SELFTEST
 
 config FFSI
 	bool
-	default y
+	default n
 	help
 	  Library to support FFSI class as the realization of Elastic Capacity
 	  Vessel abstract theory.
