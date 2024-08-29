@@ -855,7 +855,9 @@ static struct task_struct *dup_task_struct(struct task_struct *orig, int node)
 {
 	struct task_struct *tsk;
 	unsigned long *stack;
+#ifdef CONFIG_VMAP_STACK
 	struct vm_struct *stack_vm_area;
+#endif
 	int err;
 
 	if (node == NUMA_NO_NODE)
@@ -868,7 +870,9 @@ static struct task_struct *dup_task_struct(struct task_struct *orig, int node)
 	if (!stack)
 		goto free_tsk;
 
+#ifdef CONFIG_VMAP_STACK
 	stack_vm_area = task_stack_vm_area(tsk);
+#endif
 
 	err = arch_dup_task_struct(tsk, orig);
 
