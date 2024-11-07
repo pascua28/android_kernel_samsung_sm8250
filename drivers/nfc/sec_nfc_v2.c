@@ -550,10 +550,37 @@ void sec_nfc_clk_ctl_disable(struct sec_nfc_info *info)
 	info->clk_ctl = false;
 }
 
+static bool sec_nfc_check_pin_status(struct sec_nfc_platform_data *pdata,
+					enum sec_nfc_mode mode)
+{
+	if (mode != SEC_NFC_MODE_OFF) {
+		if (pdata->ven) {
+			if (gpio_get_value(pdata->ven) != SEC_NFC_PW_ON)
+				return false;
+		}
+	}
+
+	if (mode == SEC_NFC_MODE_BOOTLOADER) {
+		if (pdata->firm) {
+			if (gpio_get_value_cansleep(pdata->firm) != SEC_NFC_FW_ON)
+				return false;
+
+		}
+	} else {
+		if (pdata->firm) {
+			if (gpio_get_value_cansleep(pdata->firm) != SEC_NFC_FW_OFF)
+				return false;
+		}
+	}
+
+	return true;
+}
+
 static void sec_nfc_set_mode(struct sec_nfc_info *info,
 					enum sec_nfc_mode mode)
 {
 	struct sec_nfc_platform_data *pdata = info->pdata;
+	int retry_count = 3;
 #ifdef CONFIG_ESE_COLDRESET
 	int alreadFirmHigh = 0;
 	int ret;
@@ -603,6 +630,7 @@ static void sec_nfc_set_mode(struct sec_nfc_info *info,
 	NFC_LOG_INFO("FIRMWARE_GUARD_TIME(+1ms) in PW_OFF(total:4ms)\n");
 #endif
 
+pin_setting_retry:
 	gpio_set_value(pdata->ven, SEC_NFC_PW_OFF);
 	if (pdata->firm)
 		gpio_set_value(pdata->firm, SEC_NFC_FW_OFF);
@@ -617,6 +645,14 @@ static void sec_nfc_set_mode(struct sec_nfc_info *info,
 		sec_nfc_clk_ctl_enable(info);
 		enable_irq_wake(info->i2c_info.i2c_dev->irq);
 		msleep(SEC_NFC_VEN_WAIT_TIME/2);
+
+		/* Workaround: FIRM or VEN is not set sometimes */
+		if (retry_count-- > 0 && !sec_nfc_check_pin_status(pdata, mode)) {
+			NFC_LOG_INFO("Pin setting retry\n");
+			sec_nfc_clk_ctl_disable(info);
+			disable_irq_wake(info->i2c_info.i2c_dev->irq);
+			goto pin_setting_retry;
+		}
 	} else {
 #ifdef CONFIG_ESE_COLDRESET
 		int PW_OFF_DURATION = 20;
