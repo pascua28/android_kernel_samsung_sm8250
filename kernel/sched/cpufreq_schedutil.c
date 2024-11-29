@@ -963,7 +963,7 @@ static int sugov_init(struct cpufreq_policy *policy)
 		goto stop_kthread;
 	}
 
-	tunables->rate_limit_us = cpufreq_policy_transition_delay_us(policy);
+	tunables->rate_limit_us = 2000;
 #ifdef CONFIG_SCHED_FFSI_GLUE
 	tunables->fb_legacy = false;
 	sg_policy->be_stochastic = false;
