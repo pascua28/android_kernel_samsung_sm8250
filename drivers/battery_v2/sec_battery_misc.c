@@ -152,7 +152,7 @@ sec_bat_misc_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			goto err;
 		}
 
-		if (c_dev->u_data.dir == DIR_OUT) {
+		if (c_dev->u_data.dir == SWAM_DIR_OUT) {
 			if (copy_from_user(buf, c_dev->u_data.pData, c_dev->u_data.size)) {
 				ret = -EIO;
 				pr_err("%s %s - copy_from_user error\n", WC_AUTH_MSG, __func__);
