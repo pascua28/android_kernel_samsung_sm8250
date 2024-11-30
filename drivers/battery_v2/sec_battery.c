@@ -16,6 +16,11 @@
 #include <linux/sec_param.h>
 #include <linux/sec_debug.h>
 
+#if defined(CONFIG_CCIC_MAX77705)
+#include <linux/ccic/max77705_usbc.h>
+#include <linux/ccic/ccic_core.h>
+#endif
+
 #ifdef CONFIG_SAMSUNG_BATTERY_DISALLOW_DEEP_SLEEP
 #include <linux/clk.h>
 struct clk * xo_chr = NULL;
@@ -65,6 +70,9 @@ static enum power_supply_property sec_power_props[] = {
 	POWER_SUPPLY_PROP_ONLINE,
 	POWER_SUPPLY_PROP_VOLTAGE_MAX,
 	POWER_SUPPLY_PROP_CURRENT_MAX,
+#if defined(CONFIG_CCIC_MAX77705)
+	POWER_SUPPLY_PROP_MOISTURE_DETECTED,
+#endif
 };
 
 static enum power_supply_property sec_wireless_props[] = {
@@ -7645,6 +7653,10 @@ static int sec_usb_get_property(struct power_supply *psy,
 				union power_supply_propval *val)
 {
 	struct sec_battery_info *battery = power_supply_get_drvdata(psy);
+#if defined(CONFIG_CCIC_MAX77705)
+	struct max77705_usbc_platform_data *usbc_data;
+	struct device *ccic_device = get_ccic_device();
+#endif
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_ONLINE:
@@ -7657,6 +7669,28 @@ static int sec_usb_get_property(struct power_supply *psy,
 		/* mA -> uA */
 		val->intval = battery->pdata->charging_current[battery->cable_type].input_current_limit * 1000;
 		return 0;
+#if defined(CONFIG_CCIC_MAX77705)
+	case POWER_SUPPLY_PROP_MOISTURE_DETECTED: {
+		if (!ccic_device) {
+			pr_info("ccic_dev is null\n");
+			return -ENODEV;
+		}
+
+		usbc_data = dev_get_drvdata(ccic_device);
+
+		if (!usbc_data) {
+			pr_info("usbc_data is null");
+			return -ENODEV;
+		}
+
+		if (usbc_data->current_connstat)
+			val->intval = 1;
+		else
+			val->intval = 0;
+
+		return 0;
+	}
+#endif
 	default:
 		return -EINVAL;
 	}
