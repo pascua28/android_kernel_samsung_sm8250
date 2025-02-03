@@ -142,3 +142,4 @@ out/
 *.pyc
 *.out
 zImage
+dtbo.img
