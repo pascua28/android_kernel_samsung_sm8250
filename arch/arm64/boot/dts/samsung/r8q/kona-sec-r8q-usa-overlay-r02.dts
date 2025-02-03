@@ -15,6 +15,7 @@
 
 #include "../common/kona-sec-common.dtsi"
 #include "kona-sec-r8q-r02.dtsi"
+#include "../drivers/gripsensor_r8q_usa_r00.dtsi"
 
 / {
 	model = "Samsung R8Q PROJECT - R8 DV2 (board-id,02)";

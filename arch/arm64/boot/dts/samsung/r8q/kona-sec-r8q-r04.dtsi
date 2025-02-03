@@ -10,15 +10,10 @@
  * GNU General Public License for more details.
  */
 
-/dts-v1/;
-/plugin/;
+#include "kona-sec-r8q-r03.dtsi"
+#include "kona-sec-r8q-pinctrl-r04.dtsi"
 
-#include "../common/kona-sec-common.dtsi"
-#include "kona-sec-r8q-r02.dtsi"
+&soc {
 
-/ {
-	model = "Samsung R8Q PROJECT - R8 DV2 (board-id,02)";
-	compatible = "qcom,kona-mtp", "qcom,kona", "qcom,mtp";
-	qcom,board-id = <8 2>;
-	dtbo-version = <0>;
 };
+
