@@ -17,6 +17,7 @@
 #include <linux/mm.h>
 #include <linux/debugfs.h>
 #include <linux/cleancache.h>
+#include <linux/pagemap.h>
 
 /*
  * cleancache_ops is set by cleancache_register_ops to contain the pointers
@@ -222,6 +223,11 @@ void __cleancache_put_page(struct page *page)
 		cleancache_puts++;
 		return;
 	}
+
+#ifdef CONFIG_SDP
+	if (mapping_sensitive(page->mapping))
+		return;
+#endif
 
 	VM_BUG_ON_PAGE(!PageLocked(page), page);
 	pool_id = page->mapping->host->i_sb->cleancache_poolid;
