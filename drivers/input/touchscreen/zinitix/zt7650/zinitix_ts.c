@@ -1892,7 +1892,9 @@ static void zt_ts_fod_event_report(struct zt_ts_info *info, struct point_info to
 			| ((touch_info.byte04.value_u8bit & 0xF0) >> 4);
 		info->scrub_y = ((touch_info.byte03.value_u8bit << 4) & 0xFF0)
 			| ((touch_info.byte04.value_u8bit & 0x0F));
-		if (!is_aosp) {
+		if (is_aosp)
+			sysfs_notify(&info->sec.fac_dev->kobj, NULL, "scrub_pos");
+		else {
 			input_report_key(info->input_dev, KEY_BLACK_UI_GESTURE, 1);
 			input_sync(info->input_dev);
 			input_report_key(info->input_dev, KEY_BLACK_UI_GESTURE, 0);
@@ -1911,7 +1913,9 @@ static void zt_ts_fod_event_report(struct zt_ts_info *info, struct point_info to
 			| ((touch_info.byte04.value_u8bit & 0xF0) >> 4);
 		info->scrub_y = ((touch_info.byte03.value_u8bit << 4) & 0xFF0)
 			| ((touch_info.byte04.value_u8bit & 0x0F));
-		if (!is_aosp) {
+		if (is_aosp)
+			sysfs_notify(&info->sec.fac_dev->kobj, NULL, "scrub_pos");
+		else {
 			input_report_key(info->input_dev, KEY_BLACK_UI_GESTURE, 1);
 			input_sync(info->input_dev);
 			input_report_key(info->input_dev, KEY_BLACK_UI_GESTURE, 0);
