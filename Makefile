@@ -509,6 +509,14 @@ ifneq ($(KBUILD_SRC),)
 endif
 
 ifeq ($(cc-name),clang)
+
+# Enable hot cold split optimization
+KBUILD_CFLAGS	+= -mllvm -hot-cold-split=true
+# Enable MLGO optimizations for register allocation
+KBUILD_CFLAGS	+= -mllvm -regalloc-enable-advisor=release
+KBUILD_LDFLAGS	+= -mllvm -regalloc-enable-advisor=release
+KBUILD_LDFLAGS	+= -mllvm -enable-ml-inliner=release
+
 ifneq ($(CROSS_COMPILE),)
 CLANG_FLAGS	+= --target=$(notdir $(CROSS_COMPILE:%-=%))
 GCC_TOOLCHAIN_DIR := $(dir $(shell which $(CROSS_COMPILE)elfedit))
