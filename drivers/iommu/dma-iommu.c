@@ -341,6 +341,7 @@ int iommu_dma_reserve_iova(struct device *dev, dma_addr_t base,
 
 	return 0;
 }
+EXPORT_SYMBOL_GPL(iommu_dma_reserve_iova);
 
 /*
  * Should be called prior to using dma-apis.
