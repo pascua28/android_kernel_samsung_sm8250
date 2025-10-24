@@ -1111,7 +1111,7 @@ static bool tcp_pacing_check(const struct sock *sk)
 	       hrtimer_is_queued(&tcp_sk(sk)->pacing_timer);
 }
 
-static void tcp_update_skb_after_send(struct tcp_sock *tp, struct sk_buff *skb)
+void tcp_update_skb_after_send(struct tcp_sock *tp, struct sk_buff *skb)
 {
 	skb->skb_mstamp = tp->tcp_mstamp;
 	list_move_tail(&skb->tcp_tsorted_anchor, &tp->tsorted_sent_queue);
