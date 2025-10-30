@@ -15,6 +15,7 @@
 #include <linux/ratelimit.h>
 #include <linux/swap.h>
 #include <linux/vmstat.h>
+#include <linux/pseudo_fs.h>
 #include "internal.h"
 
 static bool kzerod_enabled = true;
@@ -303,19 +304,23 @@ static void kzerod_unregister_migration(void)
 	iput(kzerod_inode);
 }
 
-static struct dentry *kzerod_pseudo_mount(struct file_system_type *fs_type,
-				int flags, const char *dev_name, void *data)
+static int kzerod_init_fs_context(struct fs_context *fc)
 {
 	static const struct dentry_operations ops = {
 		.d_dname = simple_dname,
 	};
 
-	return mount_pseudo(fs_type, "kzerod:", NULL, &ops, KZEROD_MAGIC);
+	struct pseudo_fs_context *ctx = init_pseudo(fc, KZEROD_MAGIC);
+	if (!ctx)
+		return -ENOMEM;
+
+	ctx->dops = &ops;
+	return 0;
 }
 
 static struct file_system_type kzerod_fs = {
 	.name		= "kzerod",
-	.mount		= kzerod_pseudo_mount,
+	.init_fs_context = kzerod_init_fs_context,
 	.kill_sb	= kill_anon_super,
 };
 
