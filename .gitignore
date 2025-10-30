@@ -114,6 +114,7 @@ GTAGS
 # id-utils files
 ID
 
+*.orig
 *~
 \#*#
 
@@ -143,3 +144,9 @@ Android.bp
 # Ignore build environment
 build_env/
 out/
+*.zip
+*.gz
+*.pyc
+*.out
+zImage
+dtbo.img
