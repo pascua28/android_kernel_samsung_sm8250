@@ -36,7 +36,6 @@
 #include <linux/fsnotify.h>
 #include <linux/lockdep.h>
 #include <linux/user_namespace.h>
-#include <linux/magic.h>
 #include <linux/fs_context.h>
 #include "internal.h"
 
@@ -978,9 +977,6 @@ int reconfigure_super(struct fs_context *fc)
 		if (force) {
 			sb->s_readonly_remount = 1;
 			smp_wmb();
-
-			if (sb->s_magic == F2FS_SUPER_MAGIC)
-				mnt = ERR_PTR(-EROFS);
 		} else {
 			retval = sb_prepare_remount_readonly(sb);
 			if (retval)
