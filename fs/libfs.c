@@ -1447,6 +1447,9 @@ void generic_set_encrypted_ci_d_ops(struct dentry *dentry)
 #ifdef CONFIG_UNICODE
 	bool needs_ci_ops = dentry->d_sb->s_encoding;
 #endif
+#ifdef CONFIG_FSCRYPT_SDP
+        struct inode *inode;
+#endif
 #if defined(CONFIG_FS_ENCRYPTION) && defined(CONFIG_UNICODE)
 	if (needs_encrypt_ops && needs_ci_ops) {
 		d_set_d_op(dentry, &generic_encrypted_ci_dentry_ops);
@@ -1466,7 +1469,8 @@ void generic_set_encrypted_ci_d_ops(struct dentry *dentry)
 	}
 #endif
 #ifdef CONFIG_FSCRYPT_SDP
-	if (dir->i_crypt_info) {
+	inode = d_inode(dentry);
+	if (inode && inode->i_crypt_info) {
 		d_set_d_op(dentry, &sdp_dentry_ops);
 		return;
 	}
