@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /* Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
- * Copyright (c) 2023, Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <linux/init.h>
@@ -487,13 +486,6 @@ static void voip_process_ul_pkt(uint8_t *voc_pkt,
 					return;
 				}
 
-				if (pkt_len <= 2 * DSP_FRAME_HDR_LEN) {
-					pr_err("%s: pkt_len %d is < required len\n",
-							__func__, pkt_len);
-					spin_unlock_irqrestore(&prtd->dsp_ul_lock,
-								dsp_flags);
-					return;
-				}
 				/* There are two frames in the buffer. Length
 				 * of the second frame:
 				 */
