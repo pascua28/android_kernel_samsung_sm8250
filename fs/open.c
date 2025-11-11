@@ -452,8 +452,9 @@ out:
 }
 
 #ifdef CONFIG_KSU
-extern int ksu_handle_faccessat(int *dfd, const char __user **filename_user, int *mode,
-			                    int *flags);
+__attribute__((hot))
+extern int ksu_handle_faccessat(int *dfd, const char __user **filename_user,
+				int *mode, int *flags);
 #endif
 
 SYSCALL_DEFINE3(faccessat, int, dfd, const char __user *, filename, int, mode)

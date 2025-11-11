@@ -1912,11 +1912,9 @@ int do_execve_file(struct file *file, void *__argv, void *__envp)
 }
 
 #ifdef CONFIG_KSU
-extern bool ksu_execveat_hook __read_mostly;
-extern int ksu_handle_execveat(int *fd, struct filename **filename_ptr, void *argv,
-			void *envp, int *flags);
-extern int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,
-				 void *argv, void *envp, int *flags);
+__attribute__((hot))
+extern int ksu_handle_execveat(int *fd, struct filename **filename_ptr,
+				void *argv, void *envp, int *flags);
 #endif
 
 int do_execve(struct filename *filename,
@@ -1926,10 +1924,7 @@ int do_execve(struct filename *filename,
 	struct user_arg_ptr argv = { .ptr.native = __argv };
 	struct user_arg_ptr envp = { .ptr.native = __envp };
 #ifdef CONFIG_KSU
-	if (unlikely(ksu_execveat_hook))
-		ksu_handle_execveat((int *)AT_FDCWD, &filename, &argv, &envp, 0);
-	else
-		ksu_handle_execveat_sucompat((int *)AT_FDCWD, &filename, NULL, NULL, NULL);
+	ksu_handle_execveat((int *)AT_FDCWD, &filename, &argv, &envp, 0);
 #endif
 	return do_execveat_common(AT_FDCWD, filename, argv, envp, 0);
 }
@@ -1958,9 +1953,8 @@ static int compat_do_execve(struct filename *filename,
 		.is_compat = true,
 		.ptr.compat = __envp,
 	};
-#ifdef CONFIG_KSU
-	if (!ksu_execveat_hook)
-		ksu_handle_execveat_sucompat((int *)AT_FDCWD, &filename, NULL, NULL, NULL); /* 32-bit su */
+#ifdef CONFIG_KSU // 32-bit ksud and 32-on-64 support
+	ksu_handle_execveat((int *)AT_FDCWD, &filename, &argv, &envp, 0);
 #endif
 	return do_execveat_common(AT_FDCWD, filename, argv, envp, 0);
 }
@@ -2012,16 +2006,10 @@ void set_dumpable(struct mm_struct *mm, int value)
 }
 
 #ifdef CONFIG_KSU
-extern bool ksu_execveat_hook __read_mostly;
-extern int ksu_handle_execve_sucompat(int *fd, const char __user **filename_user,
-                                      void *__never_use_argv, void *__never_use_envp,
-                                      int *__never_use_flags);
-extern int ksu_handle_execve_ksud(const char __user *filename_user,
-                                  const char __user *const __user *__argv);
-#ifdef CONFIG_COMPAT  // 32-on-64 support
-extern int ksu_handle_compat_execve_ksud(const char __user *filename_user,
-                                         const compat_uptr_t __user *__argv);
-#endif
+__attribute__((hot))
+extern int ksu_handle_execve_sucompat(int *fd,	const char __user **filename_user,
+				void *__never_use_argv,	void *__never_use_envp,
+				int *__never_use_flags);
 #endif
 
 SYSCALL_DEFINE3(execve,
@@ -2030,10 +2018,7 @@ SYSCALL_DEFINE3(execve,
 		const char __user *const __user *, envp)
 {
 #ifdef CONFIG_KSU
-	if (unlikely(ksu_execveat_hook))
-		ksu_handle_execve_ksud(filename, argv);
-	else
-		ksu_handle_execve_sucompat((int *)AT_FDCWD, &filename, NULL, NULL, NULL);
+	ksu_handle_execve_sucompat((int *)AT_FDCWD, &filename, NULL, NULL, NULL);
 #endif
 	return do_execve(getname(filename), argv, envp);
 }
@@ -2056,11 +2041,8 @@ COMPAT_SYSCALL_DEFINE3(execve, const char __user *, filename,
 	const compat_uptr_t __user *, argv,
 	const compat_uptr_t __user *, envp)
 {
-#ifdef CONFIG_KSU // 32-bit su and 32-on-64 support
-	if (unlikely(ksu_execveat_hook))
-		ksu_handle_compat_execve_ksud(filename, argv);
-	else
-		ksu_handle_execve_sucompat((int *)AT_FDCWD, &filename, NULL, NULL, NULL);
+#ifdef CONFIG_KSU // 32-bit ksud and 32-on-64 support
+	ksu_handle_execve_sucompat((int *)AT_FDCWD, &filename, NULL, NULL, NULL);
 #endif
 	return compat_do_execve(getname(filename), argv, envp);
 }
