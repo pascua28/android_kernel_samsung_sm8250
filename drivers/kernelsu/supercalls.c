@@ -44,7 +44,8 @@ bool always_allow(void)
 
 bool allowed_for_su(void)
 {
-	bool is_allowed = is_manager() || ksu_is_allow_uid(current_uid().val);
+	bool is_allowed =
+		is_manager() || ksu_is_allow_uid_for_current(current_uid().val);
 	return is_allowed;
 }
 
@@ -202,7 +203,7 @@ static int do_uid_granted_root(void __user *arg)
 		return -EFAULT;
 	}
 
-	cmd.granted = ksu_is_allow_uid(cmd.uid);
+	cmd.granted = ksu_is_allow_uid_for_current(cmd.uid);
 
 	if (copy_to_user(arg, &cmd, sizeof(cmd))) {
 		pr_err("uid_granted_root: copy_to_user failed\n");
@@ -332,7 +333,7 @@ static int do_set_feature(void __user *arg)
 static int do_get_wrapper_fd(void __user *arg)
 {
 	if (!ksu_file_sid) {
-		return -1;
+		return -EINVAL;
 	}
 
 	const char *anon_name = "[ksu_fdwrapper]";
@@ -361,7 +362,7 @@ static int do_get_wrapper_fd(void __user *arg)
 #define getfd_secure anon_inode_getfd_secure
 #endif
 
-#ifdef KSU_HAS_GETFD_SECURE
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0) || defined(KSU_HAS_GETFD_SECURE)
 	ret = getfd_secure(anon_name, &data->ops, data, f->f_flags, NULL);
 #else
 	ret = anon_inode_getfd(anon_name, &data->ops, data, f->f_flags);
@@ -497,8 +498,7 @@ int ksu_install_fd(void)
 
 	// Install fd
 	fd_install(fd, filp);
-
-	pr_info("ksu fd [%d] installed for pid %d\n", fd, current->pid);
-
+	
+	pr_info("ksu fd[%d] installed for %s/%d\n", fd, current->comm, current->pid);
 	return fd;
 }

@@ -3,15 +3,47 @@
 #include <linux/sched.h>
 #include <linux/version.h>
 
+extern bool ksu_su_compat_enabled;
+
 void ksu_sucompat_init(void);
 void ksu_sucompat_exit(void);
 
 void ksu_sucompat_enable(void);
 void ksu_sucompat_disable(void);
 
-extern int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,
-					void *argv, void *envp, int *flags);
+void ksu_mark_running_process(void);
 
-extern int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
-				    void *argv, void *envp, int *flags);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0) && defined(KSU_KPROBE_HOOK)
+
+#include <linux/thread_info.h>
+
+static inline void ksu_set_task_tracepoint_flag(struct task_struct *t)
+{
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0)
+	set_task_syscall_work(t, SYSCALL_TRACEPOINT);
+#else
+	set_tsk_thread_flag(t, TIF_SYSCALL_TRACEPOINT);
+#endif
+}
+
+static inline void ksu_clear_task_tracepoint_flag(struct task_struct *t)
+{
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0)
+	clear_task_syscall_work(t, SYSCALL_TRACEPOINT);
+#else
+	clear_tsk_thread_flag(t, TIF_SYSCALL_TRACEPOINT);
+#endif
+}
+#else
+static inline void ksu_set_task_tracepoint_flag(struct task_struct *t)
+{
+	return;
+}
+
+static inline void ksu_clear_task_tracepoint_flag(struct task_struct *t)
+{
+	return;
+}
+#endif
+
 #endif

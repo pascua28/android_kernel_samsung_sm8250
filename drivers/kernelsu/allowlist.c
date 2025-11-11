@@ -1,3 +1,5 @@
+#include <linux/mutex.h>
+#include <linux/task_work.h>
 #include <linux/capability.h>
 #include <linux/compiler.h>
 #include <linux/fs.h>
@@ -8,6 +10,11 @@
 #include <linux/slab.h>
 #include <linux/types.h>
 #include <linux/version.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0)
+#include <linux/sched/task.h>
+#else
+#include <linux/sched.h>
+#endif
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
 #include <linux/compiler_types.h>
 #endif
@@ -93,10 +100,7 @@ static uint8_t allow_list_bitmap[PAGE_SIZE] __read_mostly __aligned(PAGE_SIZE);
 
 #define KERNEL_SU_ALLOWLIST "/data/adb/ksu/.allowlist"
 
-static struct work_struct ksu_save_work;
-static struct work_struct ksu_load_work;
-
-bool persistent_allow_list(void);
+void persistent_allow_list(void);
 
 void ksu_show_allow_list(void)
 {
@@ -231,9 +235,9 @@ out:
 	} else {
 		if (profile->allow_su) {
 			/*
-			 * 1024 apps with uid higher than BITMAP_UID_MAX
-			 * registered to request superuser?
-			 */
+             * 1024 apps with uid higher than BITMAP_UID_MAX
+             * registered to request superuser?
+             */
 			if (allow_list_pointer >= ARRAY_SIZE(allow_list_arr)) {
 				pr_err("too many apps registered\n");
 				WARN_ON(1);
@@ -270,11 +274,6 @@ bool __ksu_is_allow_uid(uid_t uid)
 {
 	int i;
 
-	if (unlikely(uid == 0)) {
-		// already root, but only allow our domain.
-		return is_ksu_domain();
-	}
-
 	if (forbid_system_uid(uid)) {
 		// do not bother going through the list if it's system
 		return false;
@@ -297,6 +296,15 @@ bool __ksu_is_allow_uid(uid_t uid)
 	}
 
 	return false;
+}
+
+bool __ksu_is_allow_uid_for_current(uid_t uid)
+{
+	if (unlikely(uid == 0)) {
+		// already root, but only allow our domain.
+		return is_ksu_domain();
+	}
+	return __ksu_is_allow_uid(uid);
 }
 
 bool ksu_uid_should_umount(uid_t uid)
@@ -360,7 +368,7 @@ bool ksu_get_allow_list(int *array, int *length, bool allow)
 	return true;
 }
 
-void do_save_allow_list(struct work_struct *work)
+static void do_persistent_allow_list(struct callback_head *_cb)
 {
 	u32 magic = FILE_MAGIC;
 	u32 version = FILE_FORMAT_VERSION;
@@ -368,30 +376,31 @@ void do_save_allow_list(struct work_struct *work)
 	struct list_head *pos = NULL;
 	loff_t off = 0;
 
+	mutex_lock(&allowlist_mutex);
 	struct file *fp = ksu_filp_open_compat(
 		KERNEL_SU_ALLOWLIST, O_WRONLY | O_CREAT | O_TRUNC, 0644);
 	if (IS_ERR(fp)) {
 		pr_err("save_allow_list create file failed: %ld\n",
 		       PTR_ERR(fp));
-		return;
+		goto unlock;
 	}
 
 	// store magic and version
 	if (ksu_kernel_write_compat(fp, &magic, sizeof(magic), &off) !=
 	    sizeof(magic)) {
 		pr_err("save_allow_list write magic failed.\n");
-		goto exit;
+		goto close_file;
 	}
 
 	if (ksu_kernel_write_compat(fp, &version, sizeof(version), &off) !=
 	    sizeof(version)) {
 		pr_err("save_allow_list write version failed.\n");
-		goto exit;
+		goto close_file;
 	}
 
 	list_for_each (pos, &allow_list) {
 		p = list_entry(pos, struct perm_data, list);
-		pr_info("save allow list, name: %s uid: %d, allow: %d\n",
+		pr_info("save allow list, name: %s uid :%d, allow: %d\n",
 			p->profile.key, p->profile.current_uid,
 			p->profile.allow_su);
 
@@ -399,11 +408,42 @@ void do_save_allow_list(struct work_struct *work)
 					&off);
 	}
 
-exit:
+close_file:
 	filp_close(fp, 0);
+unlock:
+	mutex_unlock(&allowlist_mutex);
+	kfree(_cb);
 }
 
-void do_load_allow_list(struct work_struct *work)
+void persistent_allow_list(void)
+{
+	struct task_struct *tsk;
+
+	tsk = get_pid_task(find_vpid(1), PIDTYPE_PID);
+	if (!tsk) {
+		pr_err("save_allow_list find init task err\n");
+		return;
+	}
+
+	struct callback_head *cb =
+		kzalloc(sizeof(struct callback_head), GFP_KERNEL);
+	if (!cb) {
+		pr_err("save_allow_list alloc cb err\b");
+		goto put_task;
+	}
+	cb->func = do_persistent_allow_list;
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 7, 8)
+	task_work_add(tsk, cb, TWA_RESUME);
+#else
+	task_work_add(tsk, cb, true);
+#endif
+
+put_task:
+	put_task_struct(tsk);
+}
+
+void ksu_load_allow_list(void)
 {
 	loff_t off = 0;
 	ssize_t ret = 0;
@@ -494,17 +534,6 @@ void ksu_prune_allowlist(bool (*is_uid_valid)(uid_t, char *, void *),
 	}
 }
 
-// make sure allow list works cross boot
-bool persistent_allow_list(void)
-{
-	return ksu_queue_work(&ksu_save_work);
-}
-
-bool ksu_load_allow_list(void)
-{
-	return ksu_queue_work(&ksu_load_work);
-}
-
 void ksu_allowlist_init(void)
 {
 	int i;
@@ -517,9 +546,6 @@ void ksu_allowlist_init(void)
 
 	INIT_LIST_HEAD(&allow_list);
 
-	INIT_WORK(&ksu_save_work, do_save_allow_list);
-	INIT_WORK(&ksu_load_work, do_load_allow_list);
-
 	init_default_profiles();
 }
 
@@ -528,7 +554,7 @@ void ksu_allowlist_exit(void)
 	struct perm_data *np = NULL;
 	struct perm_data *n = NULL;
 
-	do_save_allow_list(NULL);
+	persistent_allow_list();
 
 	// free allowlist
 	mutex_lock(&allowlist_mutex);
