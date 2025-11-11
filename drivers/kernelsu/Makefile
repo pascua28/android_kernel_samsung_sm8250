@@ -30,7 +30,9 @@ $(info -- KDIR: $(KDIR))
 $(info -- MDIR: $(MDIR))
 endif
 
-ccflags-y += -DKSU_VERSION=22174
+KSU_VERSION=22183
+ccflags-y += -DKSU_VERSION=$(KSU_VERSION)
+$(info -- KernelSU version: $(KSU_VERSION))
 
 # Checks hooks state
 ifeq ($(CONFIG_KSU_MANUAL_HOOK), y)
