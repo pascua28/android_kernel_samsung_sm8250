@@ -80,6 +80,9 @@ msm_drm-$(CONFIG_DRM_MSM_SDE) += sde/sde_crtc.o \
 	sde/sde_hw_ds.o \
 	sde/sde_fence.o \
 	sde/sde_hw_qdss.o \
+	sde/sde_hw_rc.o \
+
+msm_drm-$(CONFIG_DEBUG_FS) += sde_dbg.o \
 
 msm_drm-$(CONFIG_DRM_SDE_WB) += sde/sde_wb.o \
 	sde/sde_encoder_phys_wb.o \

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2014-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  * Copyright (C) 2013 Red Hat
  * Author: Rob Clark <robdclark@gmail.com>
  *
@@ -134,6 +135,7 @@ struct sde_plane {
 	struct sde_csc_cfg *csc_usr_ptr;
 	struct sde_csc_cfg *csc_ptr;
 
+	uint32_t cached_lut_flag;
 	const struct sde_sspp_sub_blks *pipe_sblk;
 
 	char pipe_name[SDE_NAME_SIZE];
@@ -2602,13 +2604,13 @@ static int _sde_plane_validate_fb(struct sde_plane *psde,
 		ret = msm_fb_obj_get_attrs(fb->obj[i], &fb_ns, &fb_sec,
 			&fb_sec_dir, &flags);
 
-		if ((fb_ns && (mode != SDE_DRM_FB_NON_SEC)) ||
+		if (!ret && ((fb_ns && (mode != SDE_DRM_FB_NON_SEC)) ||
 			(fb_sec && (mode != SDE_DRM_FB_SEC)) ||
-			(fb_sec_dir && (mode != SDE_DRM_FB_SEC_DIR_TRANS))) {
-			SDE_ERROR_PLANE(psde, "mode: %d fb: %d flag: 0x%x rc:%d\n",
-				 mode, fb->base.id, flags, ret);
+			(fb_sec_dir && (mode != SDE_DRM_FB_SEC_DIR_TRANS)))) {
+			SDE_ERROR_PLANE(psde, "mode: %d fb:%d flag:0x%x rc:%d\n",
+			mode, fb->base.id, flags, ret);
 			SDE_EVT32(psde->base.base.id, fb->base.id, flags,
-				fb_ns, fb_sec, fb_sec_dir, ret, SDE_EVTLOG_ERROR);
+			fb_ns, fb_sec, fb_sec_dir, ret, SDE_EVTLOG_ERROR);
 			return -EINVAL;
 		}
 	}
@@ -3222,6 +3224,21 @@ static void _sde_plane_update_properties(struct drm_plane *plane,
 	pstate->dirty = 0x0;
 }
 
+static void _sde_plane_check_lut_dirty(struct sde_plane *psde,
+			struct sde_plane_state *pstate)
+{
+	/**
+	 * Valid configuration if scaler is not enabled or
+	 * lut flag is set
+	 */
+	if (pstate->scaler3_cfg.lut_flag || !pstate->scaler3_cfg.enable)
+		return;
+
+	pstate->scaler3_cfg.lut_flag = psde->cached_lut_flag;
+	SDE_EVT32(DRMID(&psde->base), pstate->scaler3_cfg.lut_flag,
+		SDE_EVTLOG_ERROR);
+}
+
 static int sde_plane_sspp_atomic_update(struct drm_plane *plane,
 				struct drm_plane_state *old_state)
 {
@@ -3272,10 +3289,16 @@ static int sde_plane_sspp_atomic_update(struct drm_plane *plane,
 			state->crtc_w, state->crtc_h,
 			state->crtc_x, state->crtc_y);
 
+	/* Caching the valid lut flag in sde plane */
+	if (pstate->scaler3_cfg.enable &&
+			pstate->scaler3_cfg.lut_flag)
+		psde->cached_lut_flag = pstate->scaler3_cfg.lut_flag;
+
 	/* force reprogramming of all the parameters, if the flag is set */
 	if (psde->revalidate) {
 		SDE_DEBUG("plane:%d - reconfigure all the parameters\n",
 				plane->base.id);
+		_sde_plane_check_lut_dirty(psde, pstate);
 		pstate->dirty = SDE_PLANE_DIRTY_ALL | SDE_PLANE_DIRTY_CP;
 		psde->revalidate = false;
 	}
@@ -3608,7 +3631,7 @@ static void _sde_plane_install_properties(struct drm_plane *plane,
 			"prefill_time", 0x0, 0, ~0, 0,
 			PLANE_PROP_PREFILL_TIME);
 
-	info = kzalloc(sizeof(struct sde_kms_info), GFP_KERNEL);
+	info = vzalloc(sizeof(struct sde_kms_info));
 	if (!info) {
 		SDE_ERROR("failed to allocate info memory\n");
 		return;
@@ -3719,7 +3742,7 @@ static void _sde_plane_install_properties(struct drm_plane *plane,
 			info->data, SDE_KMS_INFO_DATALEN(info),
 			PLANE_PROP_INFO);
 
-	kfree(info);
+	vfree(info);
 
 	if (psde->features & BIT(SDE_SSPP_MEMCOLOR)) {
 		snprintf(feature_name, sizeof(feature_name), "%s%d",
@@ -4188,6 +4211,7 @@ static void sde_plane_destroy_state(struct drm_plane *plane,
 	/* remove ref count for fence */
 	if (pstate->input_fence)
 		sde_sync_put(pstate->input_fence);
+	pstate->input_fence = 0;
 
 	/* destroy value helper */
 	msm_property_destroy_state(&psde->property_info, pstate,
@@ -4621,7 +4645,8 @@ struct drm_plane *sde_plane_init(struct drm_device *dev,
 		SDE_ERROR("[%u]SSPP init failed\n", pipe);
 		ret = PTR_ERR(psde->pipe_hw);
 		goto clean_plane;
-	} else if (!psde->pipe_hw->cap || !psde->pipe_hw->cap->sblk) {
+	} else if (!psde->pipe_hw || !psde->pipe_hw->cap ||
+					 !psde->pipe_hw->cap->sblk) {
 		SDE_ERROR("[%u]SSPP init returned invalid cfg\n", pipe);
 		goto clean_sspp;
 	}

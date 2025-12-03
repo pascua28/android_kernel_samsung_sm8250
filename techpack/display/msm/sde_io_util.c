@@ -9,6 +9,7 @@
 #include <linux/regulator/consumer.h>
 #include <linux/delay.h>
 #include <linux/sde_io_util.h>
+#include "sde_dbg.h"
 
 #define MAX_I2C_CMDS  16
 void dss_reg_w(struct dss_io_data *io, u32 offset, u32 value, u32 debug)
