@@ -6257,6 +6257,7 @@ static void print_binder_proc(struct seq_file *m,
 	if (!print_all && m->count == header_pos)
 		m->count = start_pos;
 }
+#endif
 
 #ifdef CONFIG_SAMSUNG_FREECESS
 static void binder_in_transaction(struct binder_proc *proc, int uid)
@@ -6383,6 +6384,7 @@ void binders_in_transcation(int uid)
 }
 #endif
 
+#ifdef CONFIG_ANDROID_BINDER_LOGS
 static const char * const binder_objstat_strings[] = {
 	"proc",
 	"thread",
