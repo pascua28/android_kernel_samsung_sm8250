@@ -564,8 +564,6 @@ static void blk_pm_requeue_request(struct request *rq)
 	    (rq->rq_flags & (RQF_PM_ADDED | RQF_FLUSH_SEQ))) {
 		rq->rq_flags &= ~RQF_PM_ADDED;
 		rq->q->nr_pending--;
-		if (!rq->q->nr_pending)
-			pm_runtime_mark_last_busy(rq->q->dev);
 	}
 }
 

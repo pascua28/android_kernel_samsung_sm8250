@@ -2026,7 +2026,7 @@ static void blk_pm_put_request(struct request *rq)
 	if (rq->q->dev && !(rq->rq_flags & RQF_PM) &&
 	    (rq->rq_flags & RQF_PM_ADDED)) {
 		rq->rq_flags &= ~RQF_PM_ADDED;
-		if (!--rq->q->nr_pending || rq->q->nr_pending == 1)
+		if (!--rq->q->nr_pending)
 			pm_runtime_mark_last_busy(rq->q->dev);
 	}
 }
@@ -3208,13 +3208,8 @@ static struct request *elv_next_request(struct request_queue *q)
 			if (blk_pm_allow_request(rq))
 				return rq;
 
-			if (rq->rq_flags & RQF_SOFTBARRIER) {
-#ifdef CONFIG_PM
-	                        if(rq->q && (rq->q->rpm_status == RPM_SUSPENDING) && !(rq->rq_flags & RQF_PM))
-        				continue;
-#endif
+			if (rq->rq_flags & RQF_SOFTBARRIER)
                                 break;
-                        }
 		}
 
 		/*
