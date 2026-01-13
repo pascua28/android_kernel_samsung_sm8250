@@ -284,8 +284,6 @@ CFLAGS_ubsan.o := $(call cc-option, -fno-stack-protector) $(DISABLE_STACKLEAK_PL
 
 obj-$(CONFIG_SBITMAP) += sbitmap.o
 
-obj-$(CONFIG_FFSI) += ffsi.o
-
 obj-$(CONFIG_PARMAN) += parman.o
 
 # GCC library routines
