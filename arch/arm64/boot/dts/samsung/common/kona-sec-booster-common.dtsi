@@ -108,7 +108,7 @@
 				compatible = "resource";
 				resource@1 {
 					resource,label = "CPU";
-					resource,value = <1171200 1075200>;
+					resource,value = <0 0>;
 				};
 
 				resource@2 {
@@ -141,7 +141,7 @@
 				compatible = "resource";
 				resource@1 {
 					resource,label = "CPU";
-					resource,value = <1977600 1401600>;
+					resource,value = <0 0>;
 				};
 
 				resource@2 {
