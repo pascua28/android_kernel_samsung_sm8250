@@ -276,7 +276,7 @@ config GENERIC_ARCH_TOPOLOGY
 	  runtime.
 
 config CPU_CAPACITY_FIXUP
-	bool
+	bool "CPU capacity fixup"
 	default y
 	help
       Enable to avoid that unity set cpuset of its client task to big core only.
