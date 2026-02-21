@@ -6085,25 +6085,19 @@ out_unlock:
 	return retval;
 }
 
-static bool task_is_game(struct task_struct *p)
+static bool task_is_unity_game(struct task_struct *p)
 {
 	struct task_struct *t;
 	bool ret = false;
-
-	static const char *const threads[] =
-		{"UnityMain", "MainThread-UE4"};
-	int i, threads_size = ARRAY_SIZE(threads);
 
 	/* Filter for Android user applications (i.e., positive adj) */
 	if (p->signal->oom_score_adj >= 0) {
 		rcu_read_lock();
 		for_each_thread(p, t) {
-			/* Check for thread in the thread group */
-			for (i = 0; i < threads_size; i++) {
-				if (!strcmp(t->comm, threads[i])) {
-					ret = true;
-					break;
-				}
+			/* Check for a UnityMain thread in the thread group */
+			if (!strcmp(t->comm, "UnityMain")) {
+				ret = true;
+				break;
 			}
 		}
 		rcu_read_unlock();
@@ -6144,7 +6138,7 @@ long sched_setaffinity(pid_t pid, const struct cpumask *in_mask)
 	 * Check if the target task is part of a Unity-based game and silently
 	 * ignore the setaffinity request so that it can't sabotage itself.
 	 */
-	if (task_is_game(p))
+	if (task_is_unity_game(p))
 		goto out_put_task;
 
 	if (p->flags & PF_NO_SETAFFINITY) {
