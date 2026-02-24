@@ -70,7 +70,7 @@ jobs:
       # 3. Upload the generated boot.img
       - name: Upload release assets
         if: github.event.inputs.release
-        uses: softprops/action-gh-release@v2.4.2
+        uses: ospfranco/action-gh-release@53baadfb15d062e3af9cb02d298db35d45e9cfc0
         env:
           GITHUB_TOKEN: ${{ secrets.PARADIGM_R8Q }}
         with:
