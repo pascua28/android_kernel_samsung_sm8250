@@ -365,10 +365,10 @@ unsigned long schedutil_cpu_util(int cpu, unsigned long util_cfs,
 
 static inline unsigned long apply_dvfs_headroom(unsigned long util, int cpu)
 {
-    	unsigned long capacity = capacity_orig_of(cpu);
-    	unsigned long delta, headroom, min_util;
+	unsigned long capacity = capacity_orig_of(cpu);
+	unsigned long delta, headroom;
 
-    	if (util >= capacity)
+	if (util >= capacity)
         	return util;
         /*
          * Quadratic taper the boosting at the top end as these are expensive
@@ -377,14 +377,6 @@ static inline unsigned long apply_dvfs_headroom(unsigned long util, int cpu)
          */
 	delta = capacity - util;
 	headroom = ((delta * delta) >> 12);
-
-	/* 10% of capacity threshold */
-    	min_util = capacity / 10;
-
-    	/* Suppress boosting below the threshold */
-    	if (util < min_util) {
-        	headroom = (headroom * util * util) / (min_util * min_util);
-    	}
 
     	return util + headroom;
 }
