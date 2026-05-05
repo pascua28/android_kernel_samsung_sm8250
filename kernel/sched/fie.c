@@ -11,7 +11,6 @@
 #include <asm/arch_timer.h>
 #include <asm/cputype.h>
 #include <asm/perf_event.h>
-#include <trace/hooks/cpuidle.h>
 #include "sched.h"
 
 /*
@@ -537,14 +536,12 @@ static void fie_cpu_idle(int cpu, bool idle)
 	}
 }
 
-static void fie_idle_enter(void *data, int *state,
-			   struct cpuidle_device *dev)
+void fie_idle_enter(void)
 {
 	fie_cpu_idle(raw_smp_processor_id(), true);
 }
 
-static void fie_idle_exit(void *data, int state,
-			  struct cpuidle_device *dev)
+void fie_idle_exit(void)
 {
 	fie_cpu_idle(raw_smp_processor_id(), false);
 }
@@ -694,13 +691,6 @@ static int __init fie_init(void)
 
 	/* Precompute arithmetic to convert between ticks and nanoseconds */
 	calc_cntpct_arith();
-
-	/*
-	 * Register the cpuidle callback for frequency-invariant counting needed
-	 * to set the CPU frequency scale correctly in update_freq_scale().
-	 */
-	BUG_ON(register_trace_android_vh_cpu_idle_enter(fie_idle_enter, NULL));
-	BUG_ON(register_trace_android_vh_cpu_idle_exit(fie_idle_exit, NULL));
 
 	/* Begin updating CPU scheduler statistics from update_rq_clock() */
 	static_branch_enable(&fie_ready);
