@@ -22,14 +22,6 @@
  */
 static u64 cpu_min_sample_cntpct __read_mostly = 3 * NSEC_PER_USEC;
 
-/* Max frequencies for SM8550 (kHz) */
-static const u64 max_freqs[] = {
-	2016000, 2016000, 2016000,	/* Cores 0-2 (Silver/LITTLE) */
-	2803200, 2803200,		/* Cores 3-4 (Gold/Big) */
-	2803200, 2803200,		/* Cores 5-6 (Gold+/Big) */
-	3187200				/* Core 7 (Prime) */
-};
-
 /*
  * CNTPCT_EL0 arithmetic helpers to avoid overflowing a u64 when converting
  * between ticks and nanoseconds. This avoids needing mult_frac() in a hot path.
@@ -114,6 +106,9 @@ static DEFINE_PER_CPU_READ_MOSTLY(bool, cpu_has_amu);
 static DEFINE_PER_CPU_READ_MOSTLY(bool, cpu_has_amu_const);
 static DEFINE_STATIC_KEY_FALSE(fie_ready);
 static int cpuhp_state;
+
+/* Maximum frequency for each CPU (kHz), populated from cpufreq */
+static u32 max_freqs[NR_CPUS] __ro_after_init;
 
 enum pmu_events {
 	CPU_CYCLES,
@@ -657,8 +652,27 @@ static struct notifier_block fie_reboot_nb = {
 	.priority = INT_MAX
 };
 
+static int get_max_freqs(void)
+{
+	unsigned int cpu;
+
+	for_each_possible_cpu(cpu) {
+		max_freqs[cpu] = cpufreq_get_hw_max_freq(cpu);
+		if (!max_freqs[cpu])
+			return -ENODEV;
+	}
+
+	return 0;
+}
+
 static int __init fie_init(void)
 {
+	int ret;
+
+	ret = get_max_freqs();
+	if (ret)
+		return ret;
+
 	/*
 	 * Delete the arch's scale_freq_data callback to get rid of the
 	 * duplicated work by the arch's callback, since we read the same
@@ -694,6 +708,6 @@ static int __init fie_init(void)
 	register_reboot_notifier(&fie_reboot_nb);
 
 	pr_info("FIE: Frequency Invariance Engine initialized\n");
-	return 0;
+	return ret;
 }
 late_initcall(fie_init);
