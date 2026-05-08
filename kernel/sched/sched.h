@@ -1208,6 +1208,8 @@ static inline u64 __rq_clock_broken(struct rq *rq)
 	return READ_ONCE(rq->clock);
 }
 
+extern void fie_update_rq_clock(struct rq *rq);
+
 /*
  * rq::clock_update_flags bits
  *
