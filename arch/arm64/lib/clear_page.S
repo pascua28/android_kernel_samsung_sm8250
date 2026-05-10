@@ -48,4 +48,3 @@ SYM_FUNC_START_PI(clear_page)
 	b.ne	2b
 	ret
 SYM_FUNC_END_PI(clear_page)
-EXPORT_SYMBOL(clear_page)
