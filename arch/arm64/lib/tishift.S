@@ -27,7 +27,6 @@ SYM_FUNC_START(__ashlti3)
 	mov	x0, x2
 	ret
 SYM_FUNC_END(__ashlti3)
-EXPORT_SYMBOL(__ashlti3)
 
 SYM_FUNC_START(__ashrti3)
 	cbz	x2, 1f
@@ -49,7 +48,6 @@ SYM_FUNC_START(__ashrti3)
 	mov	x1, x2
 	ret
 SYM_FUNC_END(__ashrti3)
-EXPORT_SYMBOL(__ashrti3)
 
 SYM_FUNC_START(__lshrti3)
 	cbz	x2, 1f
@@ -71,4 +69,3 @@ SYM_FUNC_START(__lshrti3)
 	mov	x1, x2
 	ret
 SYM_FUNC_END(__lshrti3)
-EXPORT_SYMBOL(__lshrti3)
