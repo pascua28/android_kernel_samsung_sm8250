@@ -29,6 +29,11 @@
 #include <asm/cacheflush.h>
 #include <asm/checksum.h>
 
+#ifdef CONFIG_FUNCTION_TRACER
+EXPORT_SYMBOL(_mcount);
+NOKPROBE_SYMBOL(_mcount);
+#endif
+
 	/* caching functions */
 EXPORT_SYMBOL_GPL(__dma_inv_area);
 EXPORT_SYMBOL_GPL(__dma_clean_area);
