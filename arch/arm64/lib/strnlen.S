@@ -169,4 +169,3 @@ CPU_LE( lsr	tmp2, tmp2, tmp4 )	/* Shift (tmp1 & 63).  */
 	mov	len, limit
 	ret
 SYM_FUNC_END_PI(strnlen)
-EXPORT_SYMBOL_NOKASAN(strnlen)

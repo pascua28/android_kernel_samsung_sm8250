@@ -40,4 +40,3 @@ SYM_FUNC_START_WEAK(strchr)
 	csel	x0, x0, xzr, eq
 	ret
 SYM_FUNC_END(strchr)
-EXPORT_SYMBOL_NOKASAN(strchr)

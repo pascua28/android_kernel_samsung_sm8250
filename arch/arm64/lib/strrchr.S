@@ -41,4 +41,3 @@ SYM_FUNC_START_WEAK_PI(strrchr)
 2:	mov	x0, x3
 	ret
 SYM_FUNC_END_PI(strrchr)
-EXPORT_SYMBOL_NOKASAN(strrchr)
