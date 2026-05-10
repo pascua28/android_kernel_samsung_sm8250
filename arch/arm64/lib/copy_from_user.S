@@ -16,9 +16,8 @@
 
 #include <linux/linkage.h>
 
-#include <asm/asm-uaccess.h>
-#include <asm/assembler.h>
 #include <asm/cache.h>
+#include <asm/asm-uaccess.h>
 
 /*
  * Copy from user space to a kernel buffer (alignment handled by the hardware)
@@ -81,4 +80,3 @@ USER(9998f, ldtrb tmp1w, [srcin])
 9998:	sub	x0, end, dst			// bytes not copied
 	ret
 SYM_FUNC_END(__arch_copy_from_user)
-EXPORT_SYMBOL(__arch_copy_from_user)
