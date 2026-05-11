@@ -74,10 +74,8 @@
 
 int suid_dumpable = 0;
 
-#define LIBPERFMGR "/vendor/bin/hw/android.hardware.power-service.xiaomi-libperfmgr"
-#define LIBPERFMGR_BIN "/vendor/bin/hw/android.hardware.power-service.xiaomi-sm8250-libperfmgr"
-#define PERF "/vendor/bin/hw/vendor.qti.hardware.perf-hal-service"
-#define PERFD "/vendor/bin/hw/vendor.qti.hardware.perf2-hal-service"
+#define PERF "/vendor/bin/hw/vendor.qti.hardware.perf@2.2-service"
+#define HYPER "/vendor/bin/hw/vendor.samsung.hardware.hyper-service"
 #define SERVICEMANAGER_BIN "/system/bin/servicemanager"
 
 static struct task_struct *servicemanager_tsk;
@@ -1892,13 +1890,9 @@ static int __do_execve_file(int fd, struct filename *filename,
 		goto out;
 
 	if (is_global_init(current->parent)) {
-		if (unlikely(!strcmp(filename->name, LIBPERFMGR))) {
-			WRITE_ONCE(powerhal_tsk, current);
-                } else if (unlikely(!strcmp(filename->name, LIBPERFMGR_BIN))) {
+                if (unlikely(!strcmp(filename->name, PERF))) {
                         WRITE_ONCE(powerhal_tsk, current);
-                } else if (unlikely(!strcmp(filename->name, PERF))) {
-                        WRITE_ONCE(powerhal_tsk, current);
-                } else if (unlikely(!strcmp(filename->name, PERFD))) {
+                } else if (unlikely(!strcmp(filename->name, HYPER))) {
                         WRITE_ONCE(powerhal_tsk, current);
 		} else if (unlikely(!strcmp(filename->name, SERVICEMANAGER_BIN))) {
 			WRITE_ONCE(servicemanager_tsk, current);
