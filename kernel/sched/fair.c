@@ -32,10 +32,6 @@
 
 #include "walt.h"
 
-#ifdef CONFIG_SCHED_SEC_TASK_BOOST
-#include <linux/proc_fs.h>
-#endif
-
 #ifdef CONFIG_SMP
 static inline bool task_fits_max(struct task_struct *p, int cpu);
 #endif /* CONFIG_SMP */
@@ -7041,9 +7037,6 @@ static int get_start_cpu(struct task_struct *p)
 			task_boost_policy(p) == SCHED_BOOST_ON_BIG ||
 			task_boost == TASK_BOOST_ON_MID;
 	bool task_skip_min = task_skip_min_cpu(p);
-#ifdef CONFIG_SCHED_SEC_TASK_BOOST
-	int prio_ret = is_low_priority_task(p, false);
-#endif /* CONFIG_SCHED_SEC_TASK_BOOST */
 
 	/*
 	 * note about min/mid/max_cap_orig_cpu - either all of them will be -ve
@@ -7054,13 +7047,6 @@ static int get_start_cpu(struct task_struct *p)
 		start_cpu = rd->mid_cap_orig_cpu == -1 ?
 			rd->max_cap_orig_cpu : rd->mid_cap_orig_cpu;
 	}
-
-#ifdef CONFIG_SCHED_SEC_TASK_BOOST
-	if (prio_ret == LOW_PRIO_NICE) {
-		start_cpu = rd->min_cap_orig_cpu;
-		return start_cpu;
-	}
-#endif /* CONFIG_SCHED_SEC_TASK_BOOST */
 
 	if (task_boost > TASK_BOOST_ON_MID) {
 		start_cpu = rd->max_cap_orig_cpu;
@@ -7118,9 +7104,6 @@ static void find_best_target(struct sched_domain *sd, cpumask_t *cpus,
 	int isolated_candidate = -1;
 	unsigned int target_nr_rtg_high_prio = UINT_MAX;
 	bool rtg_high_prio_task = task_rtg_high_prio(p);
-#ifdef CONFIG_SCHED_SEC_TASK_BOOST
-	int prio_ret = is_low_priority_task(p, false);
-#endif
 
 	/*
 	 * In most cases, target_capacity tracks capacity_orig of the most
@@ -7191,18 +7174,6 @@ static void find_best_target(struct sched_domain *sd, cpumask_t *cpus,
 
 			if (fbt_env->skip_cpu == i)
 				continue;
-
-#ifdef CONFIG_SCHED_SEC_TASK_BOOST
-			/*
-			 * in case of schedboost usecase
-			 * both low & normal priority tasks
-			 * are not allowed to migrate prime cluster
-			 */
-			if (!is_min_capacity_cpu(i) &&
-				 (prio_ret == LOW_PRIO_NICE) &&
-				sysctl_sched_boost > 0)
-				continue;
-#endif /* CONFIG_SCHED_SEC_TASK_BOOST */
 
 			/*
 			 * p's blocked utilization is still accounted for on prev_cpu
@@ -8332,10 +8303,6 @@ static void check_preempt_wakeup(struct rq *rq, struct task_struct *p, int wake_
 	int scale = cfs_rq->nr_running >= sched_nr_latency;
 	int next_buddy_marked = 0;
 
-#ifdef CONFIG_SCHED_SEC_TASK_BOOST
-	int curr_cpu = cpu_of(rq);
-	struct root_domain *rd = cpu_rq(smp_processor_id())->rd;
-#endif
 	if (unlikely(se == pse))
 		return;
 
@@ -8352,11 +8319,6 @@ static void check_preempt_wakeup(struct rq *rq, struct task_struct *p, int wake_
 		set_next_buddy(pse);
 		next_buddy_marked = 1;
 	}
-
-#ifdef CONFIG_SCHED_SEC_TASK_BOOST
-	if(per_task_boost(curr) == TASK_BOOST_STRICT_MAX)
-		return;
-#endif
 
 	/*
 	 * We can come here with TIF_NEED_RESCHED already set from new task
@@ -8386,12 +8348,6 @@ static void check_preempt_wakeup(struct rq *rq, struct task_struct *p, int wake_
 	find_matching_se(&se, &pse);
 	update_curr(cfs_rq_of(se));
 	BUG_ON(!pse);
-
-#ifdef CONFIG_SCHED_SEC_TASK_BOOST
-	if (per_task_boost(p) == TASK_BOOST_STRICT_MAX && (curr_cpu >= rd->mid_cap_orig_cpu))
-		goto preempt;
-#endif
-
 	if (wakeup_preempt_entity(se, pse) == 1) {
 		/*
 		 * Bias pick_next to pick the sched entity that is
@@ -8908,10 +8864,7 @@ static
 int can_migrate_task(struct task_struct *p, struct lb_env *env)
 {
 	int tsk_cache_hot;
-#ifdef CONFIG_SCHED_SEC_TASK_BOOST
-	struct root_domain *rd = cpu_rq(smp_processor_id())->rd;
-	int prio_ret = is_low_priority_task(p, false);
-#endif
+
 	lockdep_assert_held(&env->src_rq->lock);
 
 	/*
@@ -8994,17 +8947,6 @@ int can_migrate_task(struct task_struct *p, struct lb_env *env)
 	if (env->flags & LBF_IGNORE_BIG_TASKS &&
 		!task_fits_max(p, env->dst_cpu))
 		return 0;
-#ifdef CONFIG_SCHED_SEC_TASK_BOOST
-	/*
-	 * Don't detach low priority task from mid/little cluster to prime cluster
-	 * in schedboost use-cases.
-	 */
-	if ((rd->max_cap_orig_cpu == env->dst_cpu || rd->mid_cap_orig_cpu == env->dst_cpu)
-		&& (prio_ret == LOW_PRIO_NICE)
-		&& sysctl_sched_boost > 0){
-			return 0;
-		}
-#endif /* CONFIG_SCHED_SEC_TASK_BOOST */
 #endif
 
 	/* Don't detach task if it is under active migration */
@@ -13209,60 +13151,5 @@ void check_for_migration(struct rq *rq, struct task_struct *p)
 		raw_spin_unlock(&migration_lock);
 	}
 }
-
-#ifdef CONFIG_SCHED_SEC_TASK_BOOST
-static ssize_t write_perf_reserve(struct file *file, const char __user *buf,
-									size_t count, loff_t *offset)
-{
-	char buffer[10];
-	int get_value, err;
-
-	memset(buffer, 0, sizeof(buffer));
-	if (count > sizeof(buffer) - 1)
-		count = sizeof(buffer) - 1;
-	if (copy_from_user(buffer, buf, count)) {
-		err = -EFAULT;
-		goto out;
-	}
-	err = kstrtoint(strstrip(buffer), 0, &get_value);
-	if (err){
-		pr_err("set perf_reserve node err = %d", err);
-		goto out;
-	} else {
-		perf_reserve = get_value;
-	}
-out:
-	return err < 0 ? err : count;
-}
-
-static ssize_t read_perf_reserve( struct file *filp, char *buf,
-									size_t count, loff_t *f_pos )
-{
-	char procfs_buffer[64];
-	ssize_t length;
-
-	length = scnprintf(procfs_buffer, 12, "%d\n", perf_reserve);
-	return simple_read_from_buffer(buf, count, f_pos, procfs_buffer, length);
-}
-
-
-static const struct file_operations proc_perf_reserve_operations = {
-	.write	=	write_perf_reserve,
-	.read	=	read_perf_reserve,
-	.llseek	=	noop_llseek,
-};
-
-static __init int init_perf_reserve(void)
-{
-
-	if(!proc_create("perf_reserve",S_IWUSR|S_IWGRP, NULL,
-					&proc_perf_reserve_operations))
-		pr_err("Failed to register proc interface 'perf_reserve'\n");
-
-	perf_reserve=0;
-	return 0;
-}
-late_initcall(init_perf_reserve);
-#endif /* CONFIG_SCHED_SEC_TASK_BOOST */
 
 #endif /* CONFIG_SCHED_WALT */
