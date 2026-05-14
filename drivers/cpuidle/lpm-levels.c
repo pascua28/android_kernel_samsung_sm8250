@@ -43,6 +43,7 @@
 #include "../clk/clk.h"
 #define CREATE_TRACE_POINTS
 #include <trace/events/trace_msm_low_power.h>
+#include "../../kernel/trace/trace.h"
 
 #ifdef CONFIG_SEC_PM_DEBUG
 #include <linux/sec-pinmux.h>
@@ -1460,11 +1461,11 @@ static void update_history(struct cpuidle_device *dev, int idx)
 		else
 			history->hptr--;
 
-		history->resi[history->hptr] += dev->last_residency;
+		history->resi[history->hptr] += nsecs_to_usecs(dev->last_residency_ns);
 		history->htmr_wkup = 0;
 		tmr = 1;
 	} else
-		history->resi[history->hptr] = dev->last_residency;
+		history->resi[history->hptr] = nsecs_to_usecs(dev->last_residency_ns);
 
 	history->mode[history->hptr] = idx;
 
@@ -1508,7 +1509,7 @@ exit:
 
 	cluster_unprepare(cpu->parent, cpumask, idx, true, end_time, success);
 	cpu_unprepare(cpu, idx, true);
-	dev->last_residency = ktime_us_delta(ktime_get(), start);
+	dev->last_residency_ns = ktime_to_ns(ktime_us_delta(ktime_get(), start));
 	update_history(dev, idx);
 	trace_cpu_idle_exit(idx, success);
 	sec_debug_cpu_lpm_log(dev->cpu, idx, success, 0);
