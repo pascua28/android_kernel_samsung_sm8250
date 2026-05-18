@@ -1795,7 +1795,6 @@ struct f2fs_sec_stat_info {
 	u32 fs_por_error;
 	u32 fs_error;
 	u32 max_undiscard_blks;		/* # of undiscard blocks */
-	bool userdata_mounted;
 };
 
 struct f2fs_sec_fsck_info {

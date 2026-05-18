@@ -1735,20 +1735,7 @@ int f2fs_register_sysfs(struct f2fs_sb_info *sbi)
 	if (err)
 		goto put_feature_list_kobj;
 
-// Atakan: VOLD can not label userdata partition.
-// Check for first F2FS mount. We know the first mount is always the userdata.
-#if 0
 	if (__volume_is_userdata(sbi)) {
-		err = sysfs_create_link(&f2fs_kset.kobj, &sbi->s_kobj,
-				"userdata");
-		if (err)
-			pr_err("Can not create sysfs link for userdata(%d)\n",
-					err);
-	}
-#endif
-
-	if (!(sbi->sec_stat.userdata_mounted)) {
-		sbi->sec_stat.userdata_mounted = 1;
 		err = sysfs_create_link(&f2fs_kset.kobj, &sbi->s_kobj,
 				"userdata");
 		if (err)
