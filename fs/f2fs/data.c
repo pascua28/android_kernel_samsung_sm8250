@@ -26,12 +26,6 @@
 #include "iostat.h"
 #include <trace/events/f2fs.h>
 
-#include <asm/div64.h>
-#ifdef CONFIG_PROC_FSLOG
-#include <linux/fslog.h>
-#else
-#define ST_LOG(fmt, ...)
-#endif
 #define NUM_PREALLOC_POST_READ_CTXS	128
 
 static struct kmem_cache *bio_post_read_ctx_cache;
@@ -360,11 +354,10 @@ static void f2fs_write_end_io(struct bio *bio)
 #endif
 				f2fs_stop_checkpoint(sbi, true,
 						STOP_CP_REASON_WRITE_FAIL);
-				f2fs_bug_on_endio(sbi, 1);
 			}
 		}
 
-		f2fs_bug_on_endio(sbi, page->mapping == NODE_MAPPING(sbi) &&
+		f2fs_bug_on(sbi, page->mapping == NODE_MAPPING(sbi) &&
 					page->index != nid_of_node(page));
 
 		dec_page_count(sbi, type);
@@ -462,13 +455,6 @@ static struct bio *__bio_alloc(struct f2fs_io_info *fio, int npages)
 	struct block_device *bdev;
 	sector_t sector;
 	struct bio *bio;
-	int defkey_bypass = 0;
-
-	/* @fs.sec -- 0531f63f3688ffb680b8c83a53641dce37f186da -- */
-	if (fio->op_flags & F2FS_REQ_DEFKEY_BYPASS) {
-		fio->op_flags &= ~F2FS_REQ_DEFKEY_BYPASS;
-		defkey_bypass = 1;
-	}
 
 	bdev = f2fs_target_device(sbi, fio->new_blkaddr, &sector);
 	bio = bio_alloc_bioset(GFP_NOIO, npages, &f2fs_bioset);
@@ -486,9 +472,6 @@ static struct bio *__bio_alloc(struct f2fs_io_info *fio, int npages)
 
 	if (fio->io_wbc)
 		wbc_init_bio(fio->io_wbc, bio);
-
-	if (defkey_bypass)
-		bio_set_skip_dm_default_key(bio);
 
 	return bio;
 }
@@ -1359,20 +1342,15 @@ put_err:
 struct page *f2fs_find_data_page(struct inode *inode, pgoff_t index,
 					pgoff_t *next_pgofs)
 {
-	struct f2fs_sb_info *sbi = F2FS_I_SB(inode);
 	struct address_space *mapping = inode->i_mapping;
 	struct page *page;
-	bool for_write = false;
 
 	page = find_get_page(mapping, index);
 	if (page && PageUptodate(page))
 		return page;
 	f2fs_put_page(page, 0);
 
-	if (unlikely(f2fs_rwsem_is_locked(&sbi->cp_rwsem)))
-		for_write = true;
-
-	page = f2fs_get_read_data_page(inode, index, 0, for_write, next_pgofs);
+	page = f2fs_get_read_data_page(inode, index, 0, false, next_pgofs);
 	if (IS_ERR(page))
 		return page;
 
@@ -2171,28 +2149,20 @@ static inline loff_t f2fs_readpage_limit(struct inode *inode)
 	return i_size_read(inode);
 }
 
-struct map_blocks_container {
-	struct f2fs_map_blocks orig;
-	struct f2fs_map_blocks cow;
-};
-
 static int f2fs_read_single_page(struct inode *inode, struct page *page,
 					unsigned nr_pages,
-					struct f2fs_map_blocks *orig_map,
+					struct f2fs_map_blocks *map,
 					struct bio **bio_ret,
 					sector_t *last_block_in_bio,
 					bool is_readahead)
 {
 	struct bio *bio = *bio_ret;
 	const unsigned blocksize = blks_to_bytes(inode, 1);
-	struct map_blocks_container *map_container;
-	struct f2fs_map_blocks *map;
 	sector_t block_in_file;
 	sector_t last_block;
 	sector_t last_block_in_file;
 	sector_t block_nr;
 	int ret = 0;
-	bool use_cow = false;
 
 	block_in_file = (sector_t)page_index(page);
 	last_block = block_in_file + nr_pages;
@@ -2207,14 +2177,6 @@ static int f2fs_read_single_page(struct inode *inode, struct page *page,
 	/*
 	 * Map blocks using the previous result first.
 	 */
-	if (f2fs_is_atomic_file(inode)) {
-		map_container = container_of(orig_map, struct map_blocks_container, orig);
-		map = &map_container->cow;
-		use_cow = true;
-	} else {
-		map = orig_map;
-	}
-check_prev_map:
 	if ((map->m_flags & F2FS_MAP_MAPPED) &&
 			block_in_file > map->m_lblk &&
 			block_in_file < (map->m_lblk + map->m_len))
@@ -2227,10 +2189,7 @@ check_prev_map:
 	map->m_lblk = block_in_file;
 	map->m_len = last_block - block_in_file;
 
-	if (use_cow)
-		ret = f2fs_map_blocks(F2FS_I(inode)->cow_inode, map, 0, F2FS_GET_BLOCK_DEFAULT);
-	else
-		ret = f2fs_map_blocks(inode, map, 0, F2FS_GET_BLOCK_DEFAULT);
+	ret = f2fs_map_blocks(inode, map, 0, F2FS_GET_BLOCK_DEFAULT);
 	if (ret)
 		goto out;
 got_it:
@@ -2251,10 +2210,6 @@ got_it:
 						ERROR_INVALID_BLKADDR);
 			goto out;
 		}
-	} else if (use_cow) {
-		map = orig_map;
-		use_cow = false;
-		goto check_prev_map;
 	} else {
 zero_out:
 		zero_user_segment(page, 0, PAGE_SIZE);
@@ -2492,17 +2447,6 @@ out:
 }
 #endif
 
-static void initiate_map_blocks(struct f2fs_map_blocks *map)
-{
-	map->m_pblk = 0;
-	map->m_lblk = 0;
-	map->m_len = 0;
-	map->m_flags = 0;
-	map->m_next_pgofs = NULL;
-	map->m_next_extent = NULL;
-	map->m_seg_type = NO_CHECK_TYPE;
-	map->m_may_create = false;
-}
 /*
  * This function was originally taken from fs/mpage.c, and customized for f2fs.
  * Major change was from block_size == page_size in f2fs by default.
@@ -2519,7 +2463,7 @@ int f2fs_mpage_readpages(struct address_space *mapping,
 	struct bio *bio = NULL;
 	sector_t last_block_in_bio = 0;
 	struct inode *inode = mapping->host;
-	struct map_blocks_container map_container;
+	struct f2fs_map_blocks map;
 #ifdef CONFIG_F2FS_FS_COMPRESSION
 	struct compress_ctx cc = {
 		.inode = inode,
@@ -2541,9 +2485,14 @@ int f2fs_mpage_readpages(struct address_space *mapping,
 	if (!nr_pages)
 		return 0;
 
-	initiate_map_blocks(&map_container.orig);
-	if (f2fs_is_atomic_file(inode))
-		initiate_map_blocks(&map_container.cow);
+	map.m_pblk = 0;
+	map.m_lblk = 0;
+	map.m_len = 0;
+	map.m_flags = 0;
+	map.m_next_pgofs = NULL;
+	map.m_next_extent = NULL;
+	map.m_seg_type = NO_CHECK_TYPE;
+	map.m_may_create = false;
 
 	/*
 	 * Two readahead threads for same address range can cause race condition
@@ -2609,7 +2558,7 @@ int f2fs_mpage_readpages(struct address_space *mapping,
 read_single_page:
 #endif
 
-		ret = f2fs_read_single_page(inode, page, max_nr_pages, &map_container.orig,
+		ret = f2fs_read_single_page(inode, page, max_nr_pages, &map,
 					&bio, &last_block_in_bio, is_readahead);
 		if (ret) {
 #ifdef CONFIG_F2FS_FS_COMPRESSION
@@ -2892,13 +2841,6 @@ got_it:
 		goto out_writepage;
 	}
 
-	if (file_is_hot(inode))
-		F2FS_I_SB(inode)->sec_stat.hot_file_written_blocks++;
-	else if (file_is_cold(inode))
-		F2FS_I_SB(inode)->sec_stat.cold_file_written_blocks++;
-	else
-		F2FS_I_SB(inode)->sec_stat.warm_file_written_blocks++;
-
 	/*
 	 * If current allocation needs SSR,
 	 * it had better in-place writes for updated data.
@@ -3004,9 +2946,7 @@ int f2fs_write_single_data_page(struct page *page, int *submitted,
 
 	trace_f2fs_writepage(page, DATA);
 
-	f2fs_cond_set_fua(&fio);
-
-	/* we should bypass data pages to proceed the kworker jobs */
+	/* we should bypass data pages to proceed the kworkder jobs */
 	if (unlikely(f2fs_cp_error(sbi))) {
 		mapping_set_error(page->mapping, -EIO);
 		/*
@@ -3170,8 +3110,7 @@ static int f2fs_write_cache_pages(struct address_space *mapping,
 {
 	int ret = 0;
 	int done = 0, retry = 0;
-	struct page *onstack_pages[F2FS_ONSTACK_PAGES];
-	struct page **pages = onstack_pages;
+	struct page *pages[F2FS_ONSTACK_PAGES];
 	struct f2fs_sb_info *sbi = F2FS_M_SB(mapping);
 	struct bio *bio = NULL;
 	sector_t last_block;
@@ -3202,16 +3141,7 @@ static int f2fs_write_cache_pages(struct address_space *mapping,
 	int nwritten = 0;
 	int submitted = 0;
 	int i;
-	int nr_pages_max = F2FS_ONSTACK_PAGES;
 
-#ifdef CONFIG_F2FS_FS_COMPRESSION
-	if (cc.cluster_size > nr_pages_max) {
-		nr_pages_max = cc.cluster_size;
-		pages = f2fs_page_array_alloc(inode, nr_pages_max);
-		if (!pages)
-			return -ENOMEM;
-	}
-#endif
 	if (get_dirty_pages(mapping->host) <=
 				SM_I(F2FS_M_SB(mapping))->min_hot_blocks)
 		set_inode_flag(mapping->host, FI_HOT_DATA);
@@ -3239,7 +3169,7 @@ retry:
 	done_index = index;
 	while (!done && !retry && (index <= end)) {
 		nr_pages = find_get_pages_range_tag(mapping, &index, end,
-				tag, nr_pages_max, pages);
+				tag, F2FS_ONSTACK_PAGES, pages);
 		if (nr_pages == 0)
 			break;
 
@@ -3413,10 +3343,7 @@ next:
 	/* submit cached bio of IPU write */
 	if (bio)
 		f2fs_submit_merged_ipu_write(sbi, &bio, NULL);
-#ifdef CONFIG_F2FS_FS_COMPRESSION
-	if (pages != onstack_pages)
-		f2fs_page_array_free(inode, pages, nr_pages_max);
-#endif
+
 	return ret;
 }
 
@@ -3508,8 +3435,7 @@ static int __f2fs_write_data_pages(struct address_space *mapping,
 	return ret;
 
 skip_write:
-	if (mapping_tagged(mapping, PAGECACHE_TAG_DIRTY))
-		wbc->pages_skipped += get_dirty_pages(inode);
+	wbc->pages_skipped += get_dirty_pages(inode);
 	trace_f2fs_writepages(mapping->host, wbc, DATA);
 	return 0;
 }
@@ -3518,12 +3444,6 @@ static int f2fs_write_data_pages(struct address_space *mapping,
 			    struct writeback_control *wbc)
 {
 	struct inode *inode = mapping->host;
-
-	/* W/A - prevent panic while shutdown */
-	if (unlikely(ignore_fs_panic)) {
-		//pr_err("%s: Ignore panic\n", __func__);
-		return -EIO;
-	}
 
 	return __f2fs_write_data_pages(mapping, wbc,
 			F2FS_I(inode)->cp_task == current ?

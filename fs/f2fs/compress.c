@@ -48,16 +48,6 @@ static void page_array_free(struct inode *inode, void *pages, int nr)
 		kfree(pages);
 }
 
-void *f2fs_page_array_alloc(struct inode *inode, int nr)
-{
-	return page_array_alloc(inode, nr);
-}
-
-void f2fs_page_array_free(struct inode *inode, void *pages, int nr)
-{
-	page_array_free(inode, pages, nr);
-}
-
 struct f2fs_compress_ops {
 	int (*init_compress_ctx)(struct compress_ctx *cc);
 	void (*destroy_compress_ctx)(struct compress_ctx *cc);
@@ -949,7 +939,10 @@ static int __f2fs_cluster_blocks(struct inode *inode,
 					ret++;
 			}
 		}
-/* H230109-2393 : f2fs: get rid of bug_on in __f2fs_cluster_blocks() to avoid kernel panic for corrupted files */
+
+		f2fs_bug_on(F2FS_I_SB(inode),
+			!compr && ret != cluster_size &&
+			!is_inode_flag_set(inode, FI_COMPRESS_RELEASED));
 	}
 fail:
 	f2fs_put_dnode(&dn);
