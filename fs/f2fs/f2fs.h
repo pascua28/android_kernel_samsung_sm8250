@@ -59,15 +59,12 @@
 #endif
 
 extern int ignore_fs_panic;
-extern void (*ufs_debug_func)(void *);
 
 #define f2fs_bug_on(sbi, condition)      __f2fs_bug_on(sbi, condition, true)
 #define f2fs_bug_on_endio(sbi, condition) __f2fs_bug_on(sbi, condition, false)
 #define __f2fs_bug_on(sbi, condition, set_extra_blk)		\
 	do {		\
 		if (unlikely(condition)) {		\
-			if (ufs_debug_func)					\
-				ufs_debug_func(NULL);				\
 			if (is_sbi_flag_set(sbi, SBI_POR_DOING)) {		\
 				WARN_ON(1);		\
 				set_sbi_flag(sbi, SBI_NEED_FSCK);		\

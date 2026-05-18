@@ -62,8 +62,6 @@
 #include <linux/fscrypto_sdp_cache.h>
 #endif
 
-void (*ufs_debug_func)(void *) = NULL;
-
 static struct ext4_lazy_init *ext4_li_info;
 static struct mutex ext4_li_mtx;
 static struct ratelimit_state ext4_mount_msg_ratelimit;
@@ -489,8 +487,6 @@ static void ext4_handle_error(struct super_block *sb)
 		if (EXT4_SB(sb)->s_journal &&
 		  !(EXT4_SB(sb)->s_journal->j_flags & JBD2_REC_ERR))
 			return;
-		if (ufs_debug_func)
-			ufs_debug_func(NULL);
 		panic("EXT4-fs (device %s): panic forced after error\n",
 			sb->s_id);
 	}
@@ -710,8 +706,6 @@ void __ext4_abort(struct super_block *sb, const char *function,
 		if (EXT4_SB(sb)->s_journal &&
 		  !(EXT4_SB(sb)->s_journal->j_flags & JBD2_REC_ERR))
 			return;
-		if (ufs_debug_func)
-			ufs_debug_func(NULL);
 		panic("EXT4-fs panic from previous error\n");
 	}
 }
