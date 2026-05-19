@@ -1157,6 +1157,9 @@ static void ndisc_ra_useropt(struct sk_buff *ra, struct nd_opt_hdr *opt)
 	ndmsg->nduseropt_icmp_type = icmp6h->icmp6_type;
 	ndmsg->nduseropt_icmp_code = icmp6h->icmp6_code;
 	ndmsg->nduseropt_opts_len = opt->nd_opt_len << 3;
+	ndmsg->nduseropt_pad1 = 0;
+	ndmsg->nduseropt_pad2 = 0;
+	ndmsg->nduseropt_pad3 = 0;
 
 	memcpy(ndmsg + 1, opt, opt->nd_opt_len << 3);
 
@@ -1300,8 +1303,8 @@ static void ndisc_router_discovery(struct sk_buff *skb)
 	rt = rt6_get_dflt_router(net, &ipv6_hdr(skb)->saddr, skb->dev);
 
 	if (rt) {
-		neigh = ip6_neigh_lookup(&rt->fib6_nh.nh_gw,
-					 rt->fib6_nh.nh_dev, NULL,
+		neigh = ip6_neigh_lookup(&rt->fib6_nh.fib_nh_gw6,
+					 rt->fib6_nh.fib_nh_dev, NULL,
 					  &ipv6_hdr(skb)->saddr);
 		if (!neigh) {
 			ND_PRINTK(0, err,
@@ -1330,8 +1333,8 @@ static void ndisc_router_discovery(struct sk_buff *skb)
 			return;
 		}
 
-		neigh = ip6_neigh_lookup(&rt->fib6_nh.nh_gw,
-					 rt->fib6_nh.nh_dev, NULL,
+		neigh = ip6_neigh_lookup(&rt->fib6_nh.fib_nh_gw6,
+					 rt->fib6_nh.fib_nh_dev, NULL,
 					  &ipv6_hdr(skb)->saddr);
 		if (!neigh) {
 			ND_PRINTK(0, err,

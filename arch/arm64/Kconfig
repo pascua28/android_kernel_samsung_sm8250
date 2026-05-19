@@ -113,8 +113,10 @@ config ARM64
 	select HAVE_ARCH_BITREVERSE
 	select HAVE_ARCH_HUGE_VMAP
 	select HAVE_ARCH_JUMP_LABEL
+	select HAVE_ARCH_JUMP_LABEL_RELATIVE
 	select HAVE_ARCH_KASAN if !(ARM64_16K_PAGES && ARM64_VA_BITS_48)
 	select HAVE_ARCH_KASAN_SW_TAGS if HAVE_ARCH_KASAN
+	select HAVE_ARCH_KFENCE
 	select HAVE_ARCH_KGDB
 	select HAVE_ARCH_MMAP_RND_BITS
 	select HAVE_ARCH_MMAP_RND_COMPAT_BITS if COMPAT
@@ -1062,7 +1064,7 @@ config ARCH_ENABLE_SPLIT_PMD_PTLOCK
 
 config SECCOMP
 	bool "Enable seccomp to safely compute untrusted bytecode"
-	---help---
+	help
 	  This kernel feature is useful for number crunching applications
 	  that may need to compute untrusted bytecode during their
 	  execution. By using pipes or other transports made available to
@@ -1096,7 +1098,7 @@ config KEXEC
 	depends on PM_SLEEP_SMP
 	select KEXEC_CORE
 	bool "kexec system call"
-	---help---
+	help
 	  kexec is a system call that implements the ability to shutdown your
 	  current kernel, and to start another kernel.  It is like a reboot
 	  but it is independent of the system firmware.   And like a reboot

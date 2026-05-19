@@ -1693,22 +1693,18 @@ static void pidfd_show_fdinfo(struct seq_file *m, struct file *f)
  */
 static __poll_t pidfd_poll(struct file *file, struct poll_table_struct *pts)
 {
-	struct task_struct *task;
 	struct pid *pid = file->private_data;
 	__poll_t poll_flags = 0;
 
 	poll_wait(file, &pid->wait_pidfd, pts);
 
-	rcu_read_lock();
-	task = pid_task(pid, PIDTYPE_PID);
 	/*
 	 * Inform pollers only when the whole thread group exits.
 	 * If the thread group leader exits before all other threads in the
 	 * group, then poll(2) should block, similar to the wait(2) family.
 	 */
-	if (!task || (task->exit_state && thread_group_empty(task)))
+	if (thread_group_exited(pid))
 		poll_flags = EPOLLIN | EPOLLRDNORM;
-	rcu_read_unlock();
 
 	return poll_flags;
 }
@@ -2588,7 +2584,7 @@ static int unshare_fs(unsigned long unshare_flags, struct fs_struct **new_fsp)
 		return 0;
 
 	/* don't need lock here; in the worst case we'll do useless copy */
-	if (fs->users == 1)
+	if (!(unshare_flags & CLONE_NEWNS) && fs->users == 1)
 		return 0;
 
 	*new_fsp = copy_fs_struct(fs);
