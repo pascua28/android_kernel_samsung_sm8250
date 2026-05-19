@@ -141,4 +141,3 @@ static __init int kp_ksud_init()
 	kthread_run(unregister_kprobe_function, NULL, "kp_unreg");
 	return 0;
 }
-late_initcall(kp_ksud_init);

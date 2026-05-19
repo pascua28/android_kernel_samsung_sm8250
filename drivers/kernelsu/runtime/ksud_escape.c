@@ -186,8 +186,6 @@ unreg_bprm_set_creds:
 
 bprm_set_creds:
 	return orig_bprm_set_creds(bprm);
-
-
 }
 #endif
 

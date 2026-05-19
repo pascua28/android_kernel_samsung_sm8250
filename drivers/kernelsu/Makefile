@@ -11,8 +11,8 @@ MDIR := $(realpath $(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 $(info -- KDIR: $(KDIR))
 $(info -- MDIR: $(MDIR))
 
-# compliant to last upstream kernel change as of cc83433
-CFLAGS_ksu.o += -DKSU_VERSION=32481
+# compliant to last upstream kernel change as of da8e0ab
+CFLAGS_ksu.o += -DKSU_VERSION=32493
 
 ifndef KSU_EXPECTED_SIZE
 KSU_EXPECTED_SIZE := 0x033b
@@ -37,6 +37,12 @@ CFLAGS_ksu.o += -DEXPECTED_HASH=\"$(KSU_EXPECTED_HASH)\"
 ifeq ($(shell grep -A1 "void security_add_hooks" $(srctree)/include/linux/lsm_hooks.h 2>/dev/null | grep -q lsm 2>/dev/null; echo $$?),0)
 $(info -- KernelSU/compat: security_add_hooks v2 found!)
 CFLAGS_ksu.o += -DKSU_COMPAT_SECURITY_ADD_HOOKS_V2
+endif
+
+# see security_delete_hooks
+ifeq ($(shell grep -A5 "^struct security_hook_list" $(srctree)/include/linux/lsm_hooks.h 2>/dev/null | grep -q "struct hlist_node" 2>/dev/null; echo $$?),0)
+$(info -- KernelSU/compat: security_hook_list - hlist_node found!)
+CFLAGS_ksu.o += -DKSU_COMPAT_SECURITY_DELETE_HOOKS_HLIST
 endif
 
 ifeq ($(shell grep -q " current_sid(void)" $(srctree)/security/selinux/include/objsec.h; echo $$?),0)

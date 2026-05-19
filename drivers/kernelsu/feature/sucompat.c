@@ -138,7 +138,7 @@ static __always_inline void ksu_sucompat_user_common(const char __user **filenam
 
 	// sugar prep
 	uintptr_t *su_p = (uintptr_t *)su;
-	uintptr_t __user *fn_p = (uintptr_t *)*(char **)filename_user;
+	uintptr_t __user *fn_p = (uintptr_t *)untagged_addr(*(char **)filename_user);
 
 	// assert /system/bin/su\0 = 15 bytes.
 	BUILD_BUG_ON(sizeof(su) > 16); // compielr might to pad
