@@ -75,6 +75,7 @@
 int suid_dumpable = 0;
 
 #define PERF "/vendor/bin/hw/vendor.qti.hardware.perf@2.2-service"
+#define PERFLIB "/vendor/lib64/libqti-perfd.so"
 #define HYPER "/vendor/bin/hw/vendor.samsung.hardware.hyper-service"
 #define SERVICEMANAGER_BIN "/system/bin/servicemanager"
 
@@ -1894,6 +1895,8 @@ static int __do_execve_file(int fd, struct filename *filename,
                         WRITE_ONCE(powerhal_tsk, current);
                 } else if (unlikely(!strcmp(filename->name, HYPER))) {
                         WRITE_ONCE(powerhal_tsk, current);
+		} else if (unlikely(!strcmp(filename->name, PERFLIB))) {
+			WRITE_ONCE(powerhal_tsk, current);
 		} else if (unlikely(!strcmp(filename->name, SERVICEMANAGER_BIN))) {
 			WRITE_ONCE(servicemanager_tsk, current);
 		}
